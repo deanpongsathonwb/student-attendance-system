@@ -1,0 +1,490 @@
+{
+  "$schema": "https://supabase.com/schemas/blueprint.json",
+  "version": "1.0.0",
+  "project": {
+    "name": "student-attendance-system",
+    "displayName": "ระบบเช็คชื่อนักเรียน (Student Attendance System)",
+    "architecture": "BaaS (Backend-as-a-Service)",
+    "provider": "Supabase",
+    "databaseVersion": "PostgreSQL 16",
+    "updatedAt": "2026-11-09T00:25:00Z"
+  },
+  "auth": {
+    "providers": ["email"],
+    "settings": {
+      "enableSignup": false,
+      "enableEmailConfirmations": false,
+      "jwtExpirySeconds": 3600,
+      "refreshTokenExpirySeconds": 604800,
+      "passwordPolicy": {
+        "minLength": 8,
+        "requireUppercase": true,
+        "requireLowercase": true,
+        "requireNumbers": true,
+        "requireSymbols": false
+      }
+    },
+    "appMetadata": {
+      "roleField": "role",
+      "allowedRoles": ["teacher", "advisor", "admin"],
+      "securityRule": "Store authorization claims strictly in app_metadata to prevent client tampering"
+    }
+  },
+  "database": {
+    "schemas": ["public"],
+    "extensions": [
+      {
+        "name": "pgcrypto",
+        "schema": "public",
+        "description": "Cryptographic functions and UUID generation"
+      },
+      {
+        "name": "pg_stat_statements",
+        "schema": "extensions",
+        "description": "Query execution performance monitoring"
+      }
+    ],
+    "enums": [
+      {
+        "name": "user_role",
+        "values": ["teacher", "advisor", "admin"]
+      },
+      {
+        "name": "attendance_status",
+        "values": ["present", "late", "absent", "leave", "activity"]
+      }
+    ],
+    "tables": [
+      {
+        "name": "profiles",
+        "description": "Staff profile directory linked to Supabase Auth users",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "references": "auth.users(id) ON DELETE CASCADE" },
+          { "name": "username", "type": "text", "unique": true, "nullable": false },
+          { "name": "role", "type": "user_role", "nullable": false },
+          { "name": "full_name", "type": "text", "nullable": false },
+          { "name": "position", "type": "text", "nullable": true },
+          { "name": "department", "type": "text", "nullable": true },
+          { "name": "email", "type": "text", "unique": true, "nullable": false },
+          { "name": "advisory_classroom_id", "type": "text", "nullable": true, "references": "public.classrooms(id) ON DELETE SET NULL" },
+          { "name": "avatar_url", "type": "text", "nullable": true },
+          { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false },
+          { "name": "updated_at", "type": "timestamptz", "default": "now()", "nullable": false }
+        ]
+      },
+      {
+        "name": "classrooms",
+        "description": "Classroom definitions and advisor teacher mapping",
+        "columns": [
+          { "name": "id", "type": "text", "primaryKey": true },
+          { "name": "name", "type": "text", "nullable": false },
+          { "name": "short_name", "type": "text", "nullable": false },
+          { "name": "grade_level", "type": "text", "nullable": false },
+          { "name": "room_number", "type": "text", "nullable": false },
+          { "name": "advisor_id", "type": "uuid", "nullable": true, "references": "public.profiles(id) ON DELETE SET NULL" },
+          { "name": "total_students", "type": "integer", "default": 0, "nullable": false },
+          { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false },
+          { "name": "updated_at", "type": "timestamptz", "default": "now()", "nullable": false }
+        ]
+      },
+      {
+        "name": "students",
+        "description": "Student master data with classroom enrollment and parent contact",
+        "columns": [
+          { "name": "id", "type": "text", "primaryKey": true },
+          { "name": "student_code", "type": "text", "unique": true, "nullable": false },
+          { "name": "classroom_id", "type": "text", "nullable": false, "references": "public.classrooms(id) ON DELETE CASCADE" },
+          { "name": "seat_number", "type": "integer", "nullable": false },
+          { "name": "full_name", "type": "text", "nullable": false },
+          { "name": "parent_name", "type": "text", "nullable": false },
+          { "name": "parent_phone", "type": "text", "nullable": false },
+          { "name": "parent_relation", "type": "text", "nullable": false },
+          { "name": "avatar_url", "type": "text", "nullable": true },
+          { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false },
+          { "name": "updated_at", "type": "timestamptz", "default": "now()", "nullable": false }
+        ]
+      },
+      {
+        "name": "courses",
+        "description": "Subject courses, timetable slots, and assigned instructors",
+        "columns": [
+          { "name": "id", "type": "text", "primaryKey": true },
+          { "name": "course_code", "type": "text", "nullable": false },
+          { "name": "name", "type": "text", "nullable": false },
+          { "name": "credits", "type": "numeric(3,1)", "nullable": false },
+          { "name": "classroom_id", "type": "text", "nullable": false, "references": "public.classrooms(id) ON DELETE CASCADE" },
+          { "name": "teacher_id", "type": "uuid", "nullable": false, "references": "public.profiles(id) ON DELETE RESTRICT" },
+          { "name": "day_of_week", "type": "text", "nullable": false },
+          { "name": "period", "type": "integer", "nullable": false },
+          { "name": "time_range", "type": "text", "nullable": false },
+          { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false },
+          { "name": "updated_at", "type": "timestamptz", "default": "now()", "nullable": false }
+        ]
+      },
+      {
+        "name": "subject_attendance_records",
+        "description": "Subject attendance session headers with concurrency versioning",
+        "columns": [
+          { "name": "id", "type": "text", "primaryKey": true },
+          { "name": "course_id", "type": "text", "nullable": false, "references": "public.courses(id) ON DELETE CASCADE" },
+          { "name": "classroom_id", "type": "text", "nullable": false, "references": "public.classrooms(id) ON DELETE CASCADE" },
+          { "name": "date", "type": "date", "nullable": false },
+          { "name": "period", "type": "integer", "nullable": false },
+          { "name": "recorder_id", "type": "uuid", "nullable": false, "references": "public.profiles(id) ON DELETE RESTRICT" },
+          { "name": "version", "type": "integer", "default": 1, "nullable": false },
+          { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false },
+          { "name": "updated_at", "type": "timestamptz", "default": "now()", "nullable": false }
+        ],
+        "constraints": [
+          "UNIQUE (course_id, date, period)"
+        ]
+      },
+      {
+        "name": "subject_attendance_entries",
+        "description": "Individual student attendance status per subject session",
+        "columns": [
+          { "name": "id", "type": "bigint", "primaryKey": true, "autoIncrement": true },
+          { "name": "record_id", "type": "text", "nullable": false, "references": "public.subject_attendance_records(id) ON DELETE CASCADE" },
+          { "name": "student_id", "type": "text", "nullable": false, "references": "public.students(id) ON DELETE CASCADE" },
+          { "name": "status", "type": "attendance_status", "nullable": false },
+          { "name": "check_time", "type": "text", "nullable": false },
+          { "name": "remarks", "type": "text", "default": "''", "nullable": false }
+        ],
+        "constraints": [
+          "UNIQUE (record_id, student_id)"
+        ]
+      },
+      {
+        "name": "homeroom_attendance_records",
+        "description": "Morning homeroom check session headers with concurrency versioning",
+        "columns": [
+          { "name": "id", "type": "text", "primaryKey": true },
+          { "name": "classroom_id", "type": "text", "nullable": false, "references": "public.classrooms(id) ON DELETE CASCADE" },
+          { "name": "date", "type": "date", "nullable": false },
+          { "name": "recorder_id", "type": "uuid", "nullable": false, "references": "public.profiles(id) ON DELETE RESTRICT" },
+          { "name": "check_time", "type": "text", "nullable": false },
+          { "name": "version", "type": "integer", "default": 1, "nullable": false },
+          { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false },
+          { "name": "updated_at", "type": "timestamptz", "default": "now()", "nullable": false }
+        ],
+        "constraints": [
+          "UNIQUE (classroom_id, date)"
+        ]
+      },
+      {
+        "name": "homeroom_attendance_entries",
+        "description": "Individual student attendance status per morning homeroom check",
+        "columns": [
+          { "name": "id", "type": "bigint", "primaryKey": true, "autoIncrement": true },
+          { "name": "record_id", "type": "text", "nullable": false, "references": "public.homeroom_attendance_records(id) ON DELETE CASCADE" },
+          { "name": "student_id", "type": "text", "nullable": false, "references": "public.students(id) ON DELETE CASCADE" },
+          { "name": "status", "type": "attendance_status", "nullable": false },
+          { "name": "check_time", "type": "text", "nullable": false },
+          { "name": "remarks", "type": "text", "default": "''", "nullable": false }
+        ],
+        "constraints": [
+          "UNIQUE (record_id, student_id)"
+        ]
+      },
+      {
+        "name": "system_settings",
+        "description": "Global school organization settings, academic cycle, and thresholds",
+        "columns": [
+          { "name": "id", "type": "text", "primaryKey": true, "default": "'default'" },
+          { "name": "system_owner", "type": "text", "nullable": false },
+          { "name": "academic_year", "type": "text", "nullable": false },
+          { "name": "semester", "type": "text", "nullable": false },
+          { "name": "morning_check_cutoff_time", "type": "text", "nullable": false },
+          { "name": "late_threshold_minutes", "type": "integer", "nullable": false },
+          { "name": "minimum_attendance_percentage", "type": "numeric(4,1)", "nullable": false },
+          { "name": "enable_sms_alert", "type": "boolean", "default": true, "nullable": false },
+          { "name": "enable_line_notification", "type": "boolean", "default": true, "nullable": false },
+          { "name": "emergency_contact", "type": "text", "nullable": false },
+          { "name": "auto_lock_attendance_hours", "type": "integer", "default": 24, "nullable": false },
+          { "name": "updated_at", "type": "timestamptz", "default": "now()", "nullable": false }
+        ]
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_classrooms_advisor",
+        "table": "classrooms",
+        "columns": ["advisor_id"]
+      },
+      {
+        "name": "idx_students_classroom_seat",
+        "table": "students",
+        "columns": ["classroom_id", "seat_number"]
+      },
+      {
+        "name": "idx_courses_classroom",
+        "table": "courses",
+        "columns": ["classroom_id"]
+      },
+      {
+        "name": "idx_courses_teacher",
+        "table": "courses",
+        "columns": ["teacher_id"]
+      },
+      {
+        "name": "idx_subject_attendance_lookup",
+        "table": "subject_attendance_records",
+        "columns": ["course_id", "date"]
+      },
+      {
+        "name": "idx_subject_attendance_classroom",
+        "table": "subject_attendance_records",
+        "columns": ["classroom_id", "date"]
+      },
+      {
+        "name": "idx_subject_entries_record",
+        "table": "subject_attendance_entries",
+        "columns": ["record_id"]
+      },
+      {
+        "name": "idx_subject_entries_student",
+        "table": "subject_attendance_entries",
+        "columns": ["student_id"]
+      },
+      {
+        "name": "idx_homeroom_attendance_lookup",
+        "table": "homeroom_attendance_records",
+        "columns": ["classroom_id", "date"]
+      },
+      {
+        "name": "idx_homeroom_entries_record",
+        "table": "homeroom_attendance_entries",
+        "columns": ["record_id"]
+      },
+      {
+        "name": "idx_homeroom_entries_student",
+        "table": "homeroom_attendance_entries",
+        "columns": ["student_id"]
+      }
+    ],
+    "rowLevelSecurity": {
+      "strategy": "Strict Role-Based Access Control via app_metadata",
+      "policies": [
+        {
+          "table": "profiles",
+          "name": "Authenticated staff can view profiles",
+          "command": "SELECT",
+          "roles": ["authenticated"],
+          "using": "true"
+        },
+        {
+          "table": "profiles",
+          "name": "Users can update their own profile",
+          "command": "UPDATE",
+          "roles": ["authenticated"],
+          "using": "(select auth.uid()) = id",
+          "withCheck": "(select auth.uid()) = id"
+        },
+        {
+          "table": "profiles",
+          "name": "Admins have full profile management",
+          "command": "ALL",
+          "roles": ["authenticated"],
+          "using": "((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin'"
+        },
+        {
+          "table": "classrooms",
+          "name": "Staff can read classrooms",
+          "command": "SELECT",
+          "roles": ["authenticated"],
+          "using": "true"
+        },
+        {
+          "table": "classrooms",
+          "name": "Admins can manage classrooms",
+          "command": "ALL",
+          "roles": ["authenticated"],
+          "using": "((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin'"
+        },
+        {
+          "table": "students",
+          "name": "Staff can read student records",
+          "command": "SELECT",
+          "roles": ["authenticated"],
+          "using": "true"
+        },
+        {
+          "table": "students",
+          "name": "Admins can manage student records",
+          "command": "ALL",
+          "roles": ["authenticated"],
+          "using": "((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin'"
+        },
+        {
+          "table": "courses",
+          "name": "Staff can view courses",
+          "command": "SELECT",
+          "roles": ["authenticated"],
+          "using": "true"
+        },
+        {
+          "table": "courses",
+          "name": "Admins can manage courses",
+          "command": "ALL",
+          "roles": ["authenticated"],
+          "using": "((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin'"
+        },
+        {
+          "table": "subject_attendance_records",
+          "name": "Teachers can manage attendance for their courses",
+          "command": "ALL",
+          "roles": ["authenticated"],
+          "using": "((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin' OR (recorder_id = (select auth.uid()))"
+        },
+        {
+          "table": "subject_attendance_records",
+          "name": "Staff can view subject attendance records",
+          "command": "SELECT",
+          "roles": ["authenticated"],
+          "using": "true"
+        },
+        {
+          "table": "subject_attendance_entries",
+          "name": "Teachers and admins can manage subject attendance entries",
+          "command": "ALL",
+          "roles": ["authenticated"],
+          "using": "EXISTS (SELECT 1 FROM public.subject_attendance_records r WHERE r.id = record_id AND (r.recorder_id = (select auth.uid()) OR ((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin'))"
+        },
+        {
+          "table": "subject_attendance_entries",
+          "name": "Staff can view subject attendance entries",
+          "command": "SELECT",
+          "roles": ["authenticated"],
+          "using": "true"
+        },
+        {
+          "table": "homeroom_attendance_records",
+          "name": "Advisors can manage attendance for their advisory class",
+          "command": "ALL",
+          "roles": ["authenticated"],
+          "using": "((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin' OR (recorder_id = (select auth.uid()))"
+        },
+        {
+          "table": "homeroom_attendance_records",
+          "name": "Staff can view homeroom records",
+          "command": "SELECT",
+          "roles": ["authenticated"],
+          "using": "true"
+        },
+        {
+          "table": "homeroom_attendance_entries",
+          "name": "Advisors and admins can manage homeroom attendance entries",
+          "command": "ALL",
+          "roles": ["authenticated"],
+          "using": "EXISTS (SELECT 1 FROM public.homeroom_attendance_records r WHERE r.id = record_id AND (r.recorder_id = (select auth.uid()) OR ((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin'))"
+        },
+        {
+          "table": "homeroom_attendance_entries",
+          "name": "Staff can view homeroom attendance entries",
+          "command": "SELECT",
+          "roles": ["authenticated"],
+          "using": "true"
+        },
+        {
+          "table": "system_settings",
+          "name": "Staff can view system settings",
+          "command": "SELECT",
+          "roles": ["authenticated"],
+          "using": "true"
+        },
+        {
+          "table": "system_settings",
+          "name": "Admins can update system settings",
+          "command": "UPDATE",
+          "roles": ["authenticated"],
+          "using": "((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin'",
+          "withCheck": "((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin'"
+        }
+      ]
+    },
+    "triggers": [
+      {
+        "name": "trg_update_timestamp",
+        "description": "Auto-updates updated_at timestamp upon modification",
+        "function": "public.handle_updated_at()",
+        "events": ["BEFORE UPDATE"],
+        "tables": ["profiles", "classrooms", "students", "courses", "subject_attendance_records", "homeroom_attendance_records", "system_settings"]
+      },
+      {
+        "name": "trg_check_concurrency_version",
+        "description": "Increments version on record updates for Optimistic Concurrency Control",
+        "function": "public.handle_concurrency_version()",
+        "events": ["BEFORE UPDATE"],
+        "tables": ["subject_attendance_records", "homeroom_attendance_records"]
+      }
+    ]
+  },
+  "storage": {
+    "buckets": [
+      {
+        "id": "avatars",
+        "public": true,
+        "fileSizeLimit": 5242880,
+        "allowedMimeTypes": ["image/png", "image/jpeg", "image/webp", "image/svg+xml"]
+      },
+      {
+        "id": "student-photos",
+        "public": true,
+        "fileSizeLimit": 5242880,
+        "allowedMimeTypes": ["image/png", "image/jpeg", "image/webp"]
+      }
+    ],
+    "policies": [
+      {
+        "bucket": "avatars",
+        "name": "Public Read for Avatars",
+        "command": "SELECT",
+        "roles": ["public", "anon", "authenticated"],
+        "using": "bucket_id = 'avatars'"
+      },
+      {
+        "bucket": "avatars",
+        "name": "Authenticated users can upload avatar",
+        "command": "INSERT",
+        "roles": ["authenticated"],
+        "withCheck": "bucket_id = 'avatars' AND (storage.foldername(name))[1] = (select auth.uid())::text"
+      },
+      {
+        "bucket": "student-photos",
+        "name": "Authenticated staff can view student photos",
+        "command": "SELECT",
+        "roles": ["authenticated"],
+        "using": "bucket_id = 'student-photos'"
+      },
+      {
+        "bucket": "student-photos",
+        "name": "Admins can upload student photos",
+        "command": "INSERT",
+        "roles": ["authenticated"],
+        "withCheck": "bucket_id = 'student-photos' AND ((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin'"
+      }
+    ]
+  },
+  "realtime": {
+    "enabledTables": [
+      "subject_attendance_records",
+      "subject_attendance_entries",
+      "homeroom_attendance_records",
+      "homeroom_attendance_entries",
+      "students",
+      "system_settings"
+    ]
+  },
+  "seedMappings": {
+    "sourceFiles": [
+      "src/seed/users.json",
+      "src/seed/classrooms.json",
+      "src/seed/courses.json",
+      "src/seed/students.json",
+      "src/seed/attendance.json",
+      "src/seed/settings.json",
+      "src/seed/images.json"
+    ]
+  },
+  "migrationSql": "-- Enable extensions\nCREATE EXTENSION IF NOT EXISTS \"pgcrypto\";\n\n-- Create Enums\nDO $$ BEGIN\n  CREATE TYPE public.user_role AS ENUM ('teacher', 'advisor', 'admin');\nEXCEPTION\n  WHEN duplicate_object THEN NULL;\nEND $$;\n\nDO $$ BEGIN\n  CREATE TYPE public.attendance_status AS ENUM ('present', 'late', 'absent', 'leave', 'activity');\nEXCEPTION\n  WHEN duplicate_object THEN NULL;\nEND $$;\n\n-- Utility trigger function for timestamps\nCREATE OR REPLACE FUNCTION public.handle_updated_at()\nRETURNS TRIGGER AS $$\nBEGIN\n  NEW.updated_at = NOW();\n  RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;\n\n-- Utility trigger function for Optimistic Concurrency Control\nCREATE OR REPLACE FUNCTION public.handle_concurrency_version()\nRETURNS TRIGGER AS $$\nBEGIN\n  NEW.version = OLD.version + 1;\n  RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;\n\n-- 1. Classrooms Table\nCREATE TABLE IF NOT EXISTS public.classrooms (\n  id text PRIMARY KEY,\n  name text NOT NULL,\n  short_name text NOT NULL,\n  grade_level text NOT NULL,\n  room_number text NOT NULL,\n  advisor_id uuid,\n  total_students integer DEFAULT 0 NOT NULL,\n  created_at timestamptz DEFAULT now() NOT NULL,\n  updated_at timestamptz DEFAULT now() NOT NULL\n);\n\n-- 2. Profiles Table\nCREATE TABLE IF NOT EXISTS public.profiles (\n  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,\n  username text UNIQUE NOT NULL,\n  role public.user_role NOT NULL,\n  full_name text NOT NULL,\n  position text,\n  department text,\n  email text UNIQUE NOT NULL,\n  advisory_classroom_id text REFERENCES public.classrooms(id) ON DELETE SET NULL,\n  avatar_url text,\n  created_at timestamptz DEFAULT now() NOT NULL,\n  updated_at timestamptz DEFAULT now() NOT NULL\n);\n\n-- Add Foreign Key from classrooms to profiles\nALTER TABLE public.classrooms\n  DROP CONSTRAINT IF EXISTS fk_classrooms_advisor,\n  ADD CONSTRAINT fk_classrooms_advisor FOREIGN KEY (advisor_id) REFERENCES public.profiles(id) ON DELETE SET NULL;\n\n-- 3. Students Table\nCREATE TABLE IF NOT EXISTS public.students (\n  id text PRIMARY KEY,\n  student_code text UNIQUE NOT NULL,\n  classroom_id text NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,\n  seat_number integer NOT NULL,\n  full_name text NOT NULL,\n  parent_name text NOT NULL,\n  parent_phone text NOT NULL,\n  parent_relation text NOT NULL,\n  avatar_url text,\n  created_at timestamptz DEFAULT now() NOT NULL,\n  updated_at timestamptz DEFAULT now() NOT NULL\n);\n\n-- 4. Courses Table\nCREATE TABLE IF NOT EXISTS public.courses (\n  id text PRIMARY KEY,\n  course_code text NOT NULL,\n  name text NOT NULL,\n  credits numeric(3,1) NOT NULL,\n  classroom_id text NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,\n  teacher_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,\n  day_of_week text NOT NULL,\n  period integer NOT NULL,\n  time_range text NOT NULL,\n  created_at timestamptz DEFAULT now() NOT NULL,\n  updated_at timestamptz DEFAULT now() NOT NULL\n);\n\n-- 5. Subject Attendance Records Table\nCREATE TABLE IF NOT EXISTS public.subject_attendance_records (\n  id text PRIMARY KEY,\n  course_id text NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,\n  classroom_id text NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,\n  date date NOT NULL,\n  period integer NOT NULL,\n  recorder_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,\n  version integer DEFAULT 1 NOT NULL,\n  created_at timestamptz DEFAULT now() NOT NULL,\n  updated_at timestamptz DEFAULT now() NOT NULL,\n  CONSTRAINT uq_subject_attendance UNIQUE (course_id, date, period)\n);\n\n-- 6. Subject Attendance Entries Table\nCREATE TABLE IF NOT EXISTS public.subject_attendance_entries (\n  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n  record_id text NOT NULL REFERENCES public.subject_attendance_records(id) ON DELETE CASCADE,\n  student_id text NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,\n  status public.attendance_status NOT NULL,\n  check_time text NOT NULL,\n  remarks text DEFAULT '' NOT NULL,\n  CONSTRAINT uq_subject_entry UNIQUE (record_id, student_id)\n);\n\n-- 7. Homeroom Attendance Records Table\nCREATE TABLE IF NOT EXISTS public.homeroom_attendance_records (\n  id text PRIMARY KEY,\n  classroom_id text NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,\n  date date NOT NULL,\n  recorder_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,\n  check_time text NOT NULL,\n  version integer DEFAULT 1 NOT NULL,\n  created_at timestamptz DEFAULT now() NOT NULL,\n  updated_at timestamptz DEFAULT now() NOT NULL,\n  CONSTRAINT uq_homeroom_attendance UNIQUE (classroom_id, date)\n);\n\n-- 8. Homeroom Attendance Entries Table\nCREATE TABLE IF NOT EXISTS public.homeroom_attendance_entries (\n  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n  record_id text NOT NULL REFERENCES public.homeroom_attendance_records(id) ON DELETE CASCADE,\n  student_id text NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,\n  status public.attendance_status NOT NULL,\n  check_time text NOT NULL,\n  remarks text DEFAULT '' NOT NULL,\n  CONSTRAINT uq_homeroom_entry UNIQUE (record_id, student_id)\n);\n\n-- 9. System Settings Table\nCREATE TABLE IF NOT EXISTS public.system_settings (\n  id text PRIMARY KEY DEFAULT 'default',\n  system_owner text NOT NULL,\n  academic_year text NOT NULL,\n  semester text NOT NULL,\n  morning_check_cutoff_time text NOT NULL,\n  late_threshold_minutes integer NOT NULL,\n  minimum_attendance_percentage numeric(4,1) NOT NULL,\n  enable_sms_alert boolean DEFAULT true NOT NULL,\n  enable_line_notification boolean DEFAULT true NOT NULL,\n  emergency_contact text NOT NULL,\n  auto_lock_attendance_hours integer DEFAULT 24 NOT NULL,\n  updated_at timestamptz DEFAULT now() NOT NULL\n);\n\n-- Performance Indexes\nCREATE INDEX IF NOT EXISTS idx_classrooms_advisor ON public.classrooms(advisor_id);\nCREATE INDEX IF NOT EXISTS idx_students_classroom_seat ON public.students(classroom_id, seat_number);\nCREATE INDEX IF NOT EXISTS idx_courses_classroom ON public.courses(classroom_id);\nCREATE INDEX IF NOT EXISTS idx_courses_teacher ON public.courses(teacher_id);\nCREATE INDEX IF NOT EXISTS idx_subject_attendance_lookup ON public.subject_attendance_records(course_id, date);\nCREATE INDEX IF NOT EXISTS idx_subject_attendance_classroom ON public.subject_attendance_records(classroom_id, date);\nCREATE INDEX IF NOT EXISTS idx_subject_entries_record ON public.subject_attendance_entries(record_id);\nCREATE INDEX IF NOT EXISTS idx_subject_entries_student ON public.subject_attendance_entries(student_id);\nCREATE INDEX IF NOT EXISTS idx_homeroom_attendance_lookup ON public.homeroom_attendance_records(classroom_id, date);\nCREATE INDEX IF NOT EXISTS idx_homeroom_entries_record ON public.homeroom_attendance_entries(record_id);\nCREATE INDEX IF NOT EXISTS idx_homeroom_entries_student ON public.homeroom_attendance_entries(student_id);\n\n-- Attach Updated At Triggers\nCREATE OR REPLACE TRIGGER trg_classrooms_updated BEFORE UPDATE ON public.classrooms FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();\nCREATE OR REPLACE TRIGGER trg_profiles_updated BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();\nCREATE OR REPLACE TRIGGER trg_students_updated BEFORE UPDATE ON public.students FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();\nCREATE OR REPLACE TRIGGER trg_courses_updated BEFORE UPDATE ON public.courses FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();\nCREATE OR REPLACE TRIGGER trg_subject_records_updated BEFORE UPDATE ON public.subject_attendance_records FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();\nCREATE OR REPLACE TRIGGER trg_homeroom_records_updated BEFORE UPDATE ON public.homeroom_attendance_records FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();\nCREATE OR REPLACE TRIGGER trg_settings_updated BEFORE UPDATE ON public.system_settings FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();\n\n-- Attach Concurrency Version Triggers\nCREATE OR REPLACE TRIGGER trg_subject_records_version BEFORE UPDATE ON public.subject_attendance_records FOR EACH ROW EXECUTE FUNCTION public.handle_concurrency_version();\nCREATE OR REPLACE TRIGGER trg_homeroom_records_version BEFORE UPDATE ON public.homeroom_attendance_records FOR EACH ROW EXECUTE FUNCTION public.handle_concurrency_version();\n\n-- Enable Row Level Security (RLS)\nALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.classrooms ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.students ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.courses ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.subject_attendance_records ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.subject_attendance_entries ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.homeroom_attendance_records ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.homeroom_attendance_entries ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;\n\n-- Grant API Access\nGRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;\nGRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;\n\n-- Enable Realtime Replication\nALTER PUBLICATION supabase_realtime ADD TABLE public.subject_attendance_records;\nALTER PUBLICATION supabase_realtime ADD TABLE public.subject_attendance_entries;\nALTER PUBLICATION supabase_realtime ADD TABLE public.homeroom_attendance_records;\nALTER PUBLICATION supabase_realtime ADD TABLE public.homeroom_attendance_entries;\nALTER PUBLICATION supabase_realtime ADD TABLE public.students;\nALTER PUBLICATION supabase_realtime ADD TABLE public.system_settings;\n"
+}
