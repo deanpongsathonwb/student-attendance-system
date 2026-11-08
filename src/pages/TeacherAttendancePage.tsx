@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Check, CheckCircle2, Save, UserCheck, Calendar, Clock, BookOpen } from 'lucide-react';
 import ui from '../constants/ui.json';
 import {
@@ -6,9 +6,9 @@ import {
   getClassrooms,
   getStudents,
   getAttendanceData,
-  saveAttendanceData,
   getStudentAvatar,
 } from '../utils/dataStore';
+import { attendanceService } from '../services/attendanceService';
 import { sanitizeString } from '../security/xss/sanitizer';
 import type { AttendanceStatus, AttendanceEntry } from '../types/common.types';
 
@@ -20,6 +20,7 @@ export const TeacherAttendancePage: React.FC = () => {
   const [selectedCourseId, setSelectedCourseId] = useState<string>(courses[0]?.id || '');
   const [selectedDate, setSelectedDate] = useState<string>('2026-11-02');
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const selectedCourse = useMemo(
     () => courses.find((c) => c.id === selectedCourseId) || courses[0],
@@ -97,45 +98,59 @@ export const TeacherAttendancePage: React.FC = () => {
     setSaveSuccess(false);
   };
 
-  const handleSave = () => {
-    const data = getAttendanceData();
-    const recordEntries: AttendanceEntry[] = students.map((s) => {
-      const existing = entries[s.id];
-      if (existing) {
-        return {
-          ...existing,
-          remarks: sanitizeString(existing.remarks || ''),
-        };
+  // Cross-tab concurrency synchronization
+  useEffect(() => {
+    const unsubscribe = attendanceService.subscribe((newData) => {
+      if (newData) {
+        const record = newData.subjectRecords.find(
+          (r) => r.courseId === selectedCourseId && r.date === selectedDate
+        );
+        if (record) {
+          const map: Record<string, AttendanceEntry> = {};
+          record.entries.forEach((e) => {
+            map[e.studentId] = e;
+          });
+          setEntries(map);
+        }
       }
-      return {
-        studentId: s.id,
-        status: 'present',
-        checkTime: '08:30',
-        remarks: '',
-      };
     });
+    return () => unsubscribe();
+  }, [selectedCourseId, selectedDate]);
 
-    const index = data.subjectRecords.findIndex(
-      (r) => r.courseId === selectedCourseId && r.date === selectedDate
-    );
-
-    if (index >= 0) {
-      data.subjectRecords[index].entries = recordEntries;
-    } else {
-      data.subjectRecords.push({
-        id: `att_sub_${Date.now()}`,
-        courseId: selectedCourseId,
-        classroomId: selectedCourse?.classroomId || '',
-        date: selectedDate,
-        period: selectedCourse?.period || 1,
-        recorderId: 'usr_teacher_01',
-        entries: recordEntries,
+  const handleSave = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const recordEntries: AttendanceEntry[] = students.map((s) => {
+        const existing = entries[s.id];
+        if (existing) {
+          return {
+            ...existing,
+            remarks: sanitizeString(existing.remarks || ''),
+          };
+        }
+        return {
+          studentId: s.id,
+          status: 'present',
+          checkTime: '08:30',
+          remarks: '',
+        };
       });
-    }
 
-    saveAttendanceData(data);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 4000);
+      await attendanceService.saveSubjectAttendance(
+        selectedCourseId,
+        selectedCourse?.classroomId || '',
+        selectedDate,
+        selectedCourse?.period || 1,
+        'usr_teacher_01',
+        recordEntries
+      );
+
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 4000);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Stats calculation
@@ -191,11 +206,14 @@ export const TeacherAttendancePage: React.FC = () => {
 
           <button
             type="button"
+            disabled={isSubmitting}
             onClick={handleSave}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-white bg-blue-700 hover:bg-blue-800 rounded-lg transition-colors shadow-xs cursor-pointer"
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium text-white bg-blue-700 hover:bg-blue-800 rounded-lg transition-colors shadow-xs ${
+              isSubmitting ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'
+            }`}
           >
             <Save className="w-4 h-4" />
-            <span>{ui.attendance.actions.saveAttendance}</span>
+            <span>{isSubmitting ? ui.feedback.saving : ui.attendance.actions.saveAttendance}</span>
           </button>
         </div>
       </div>

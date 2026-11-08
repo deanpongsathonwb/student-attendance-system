@@ -1,12 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Users, Plus, Edit2, Trash2, Search, X, CheckCircle2 } from 'lucide-react';
 import ui from '../constants/ui.json';
 import {
   getClassrooms,
   getStudents,
-  saveStudents,
   getStudentAvatar,
 } from '../utils/dataStore';
+import { studentService } from '../services/studentService';
 import { sanitizeString } from '../security/xss/sanitizer';
 import type { Student } from '../types/common.types';
 
@@ -18,6 +18,7 @@ export const AdminStudentsPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Form states for Add/Edit student
   const [formStudentCode, setFormStudentCode] = useState<string>('');
@@ -63,58 +64,69 @@ export const AdminStudentsPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleSaveStudent = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanStudentCode = sanitizeString(formStudentCode);
-    const cleanFullName = sanitizeString(formFullName);
-    const cleanParentName = sanitizeString(formParentName);
-    const cleanParentRelation = sanitizeString(formParentRelation);
-    const cleanParentPhone = sanitizeString(formParentPhone);
+  // Cross-tab concurrency synchronization
+  useEffect(() => {
+    const unsubscribe = studentService.subscribe((updated) => {
+      if (updated) {
+        setStudents(updated);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
-    if (editingStudent) {
-      const updated = students.map((s) =>
-        s.id === editingStudent.id
-          ? {
-              ...s,
-              studentCode: cleanStudentCode,
-              fullName: cleanFullName,
-              seatNumber: Number(formSeatNumber),
-              classroomId: formClassroomId,
-              parentName: cleanParentName,
-              parentRelation: cleanParentRelation,
-              parentPhone: cleanParentPhone,
-            }
-          : s
-      );
-      setStudents(updated);
-      saveStudents(updated);
+  const handleSaveStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const cleanStudentCode = sanitizeString(formStudentCode);
+      const cleanFullName = sanitizeString(formFullName);
+      const cleanParentName = sanitizeString(formParentName);
+      const cleanParentRelation = sanitizeString(formParentRelation);
+      const cleanParentPhone = sanitizeString(formParentPhone);
+
+      if (editingStudent) {
+        await studentService.updateStudent(editingStudent.id, {
+          studentCode: cleanStudentCode,
+          fullName: cleanFullName,
+          seatNumber: Number(formSeatNumber),
+          classroomId: formClassroomId,
+          parentName: cleanParentName,
+          parentRelation: cleanParentRelation,
+          parentPhone: cleanParentPhone,
+        });
+      } else {
+        await studentService.createStudent({
+          studentCode: cleanStudentCode,
+          fullName: cleanFullName,
+          seatNumber: Number(formSeatNumber),
+          classroomId: formClassroomId,
+          parentName: cleanParentName,
+          parentRelation: cleanParentRelation,
+          parentPhone: cleanParentPhone,
+        });
+      }
+
+      setStudents(studentService.getStudents());
       setFeedbackMessage(ui.messages.studentSaved);
-    } else {
-      const newStudent: Student = {
-        id: `std_${Date.now()}`,
-        studentCode: cleanStudentCode,
-        fullName: cleanFullName,
-        seatNumber: Number(formSeatNumber),
-        classroomId: formClassroomId,
-        parentName: cleanParentName,
-        parentRelation: cleanParentRelation,
-        parentPhone: cleanParentPhone,
-      };
-      const updated = [...students, newStudent];
-      setStudents(updated);
-      saveStudents(updated);
-      setFeedbackMessage(ui.messages.studentSaved);
+      setIsModalOpen(false);
+      setTimeout(() => setFeedbackMessage(''), 3000);
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsModalOpen(false);
-    setTimeout(() => setFeedbackMessage(''), 3000);
   };
 
-  const handleDeleteStudent = (studentId: string) => {
-    const updated = students.filter((s) => s.id !== studentId);
-    setStudents(updated);
-    saveStudents(updated);
-    setFeedbackMessage(ui.messages.studentDeleted);
-    setTimeout(() => setFeedbackMessage(''), 3000);
+  const handleDeleteStudent = async (studentId: string) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await studentService.deleteStudent(studentId);
+      setStudents(studentService.getStudents());
+      setFeedbackMessage(ui.messages.studentDeleted);
+      setTimeout(() => setFeedbackMessage(''), 3000);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -396,9 +408,12 @@ export const AdminStudentsPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-medium transition-colors cursor-pointer"
+                  disabled={isSubmitting}
+                  className={`px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-medium transition-colors ${
+                    isSubmitting ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
                 >
-                  {ui.forms.save}
+                  {isSubmitting ? ui.feedback.saving : ui.forms.save}
                 </button>
               </div>
             </form>

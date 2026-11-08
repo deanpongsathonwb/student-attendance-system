@@ -1,15 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Check, CheckCircle2, Save, Clock, AlertTriangle } from 'lucide-react';
 import ui from '../constants/ui.json';
 import {
   getClassrooms,
   getStudents,
   getAttendanceData,
-  saveAttendanceData,
   getStoredSettings,
   getStoredCurrentUser,
   getStudentAvatar,
 } from '../utils/dataStore';
+import { attendanceService } from '../services/attendanceService';
 import { sanitizeString } from '../security/xss/sanitizer';
 import type { AttendanceStatus, AttendanceEntry } from '../types/common.types';
 
@@ -33,6 +33,7 @@ export const AdvisorHomeroomPage: React.FC = () => {
 
   const [selectedDate, setSelectedDate] = useState<string>('2026-11-02');
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Load homeroom entries
   const [entries, setEntries] = useState<Record<string, AttendanceEntry>>(() => {
@@ -95,44 +96,58 @@ export const AdvisorHomeroomPage: React.FC = () => {
     setSaveSuccess(false);
   };
 
-  const handleSave = () => {
-    const data = getAttendanceData();
-    const recordEntries: AttendanceEntry[] = students.map((s) => {
-      const existing = entries[s.id];
-      if (existing) {
-        return {
-          ...existing,
-          remarks: sanitizeString(existing.remarks || ''),
-        };
+  // Cross-tab concurrency synchronization
+  useEffect(() => {
+    const unsubscribe = attendanceService.subscribe((newData) => {
+      if (newData) {
+        const record = newData.homeroomRecords.find(
+          (r) => r.classroomId === advisoryClass?.id && r.date === selectedDate
+        );
+        if (record) {
+          const map: Record<string, AttendanceEntry> = {};
+          record.entries.forEach((e) => {
+            map[e.studentId] = e;
+          });
+          setEntries(map);
+        }
       }
-      return {
-        studentId: s.id,
-        status: 'present',
-        checkTime: '07:45',
-        remarks: '',
-      };
     });
+    return () => unsubscribe();
+  }, [advisoryClass, selectedDate]);
 
-    const index = data.homeroomRecords.findIndex(
-      (r) => r.classroomId === advisoryClass?.id && r.date === selectedDate
-    );
-
-    if (index >= 0) {
-      data.homeroomRecords[index].entries = recordEntries;
-    } else {
-      data.homeroomRecords.push({
-        id: `att_hr_${Date.now()}`,
-        classroomId: advisoryClass?.id || '',
-        date: selectedDate,
-        recorderId: currentUser?.id || 'usr_advisor_01',
-        checkTime: '07:55',
-        entries: recordEntries,
+  const handleSave = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const recordEntries: AttendanceEntry[] = students.map((s) => {
+        const existing = entries[s.id];
+        if (existing) {
+          return {
+            ...existing,
+            remarks: sanitizeString(existing.remarks || ''),
+          };
+        }
+        return {
+          studentId: s.id,
+          status: 'present',
+          checkTime: '07:45',
+          remarks: '',
+        };
       });
-    }
 
-    saveAttendanceData(data);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 4000);
+      await attendanceService.saveHomeroomAttendance(
+        advisoryClass?.id || '',
+        selectedDate,
+        currentUser?.id || 'usr_advisor_01',
+        '07:55',
+        recordEntries
+      );
+
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 4000);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Stats calculation
@@ -185,11 +200,14 @@ export const AdvisorHomeroomPage: React.FC = () => {
 
           <button
             type="button"
+            disabled={isSubmitting}
             onClick={handleSave}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-white bg-blue-700 hover:bg-blue-800 rounded-lg transition-colors shadow-xs cursor-pointer"
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium text-white bg-blue-700 hover:bg-blue-800 rounded-lg transition-colors shadow-xs ${
+              isSubmitting ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'
+            }`}
           >
             <Save className="w-4 h-4" />
-            <span>{ui.attendance.actions.saveAttendance}</span>
+            <span>{isSubmitting ? ui.feedback.saving : ui.attendance.actions.saveAttendance}</span>
           </button>
         </div>
       </div>

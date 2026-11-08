@@ -1,30 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Save, CheckCircle2, ShieldCheck, Bell, School } from 'lucide-react';
 import ui from '../constants/ui.json';
-import { getStoredSettings, saveStoredSettings } from '../utils/dataStore';
+import { getStoredSettings } from '../utils/dataStore';
+import { settingsService } from '../services/settingsService';
 import { sanitizeString } from '../security/xss/sanitizer';
 import type { SystemSettings } from '../types/common.types';
 
 export const AdminSettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<SystemSettings>(() => getStoredSettings());
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Cross-tab concurrency synchronization
+  useEffect(() => {
+    const unsubscribe = settingsService.subscribe((newSettings) => {
+      if (newSettings) {
+        setSettings(newSettings);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const sanitized: SystemSettings = {
-      ...settings,
-      systemOwner: sanitizeString(settings.systemOwner),
-      academicYear: sanitizeString(settings.academicYear),
-      semester: sanitizeString(settings.semester),
-      morningCheckCutoffTime: sanitizeString(settings.morningCheckCutoffTime),
-      emergencyContact: sanitizeString(settings.emergencyContact),
-    };
-    saveStoredSettings(sanitized);
-    setSavedSuccess(true);
-    setTimeout(() => {
-      setSavedSuccess(false);
-      window.location.reload();
-    }, 1200);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const sanitized: SystemSettings = {
+        ...settings,
+        systemOwner: sanitizeString(settings.systemOwner),
+        academicYear: sanitizeString(settings.academicYear),
+        semester: sanitizeString(settings.semester),
+        morningCheckCutoffTime: sanitizeString(settings.morningCheckCutoffTime),
+        emergencyContact: sanitizeString(settings.emergencyContact),
+      };
+      await settingsService.saveSettings(sanitized);
+      setSavedSuccess(true);
+      setTimeout(() => {
+        setSavedSuccess(false);
+      }, 2000);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -265,10 +282,13 @@ export const AdminSettingsPage: React.FC = () => {
         <div className="flex justify-end pt-2">
           <button
             type="submit"
-            className="flex items-center gap-2 px-6 py-2.5 text-xs font-medium text-white bg-blue-700 hover:bg-blue-800 rounded-lg transition-colors shadow-xs cursor-pointer"
+            disabled={isSubmitting}
+            className={`flex items-center gap-2 px-6 py-2.5 text-xs font-medium text-white bg-blue-700 hover:bg-blue-800 rounded-lg transition-colors shadow-xs ${
+              isSubmitting ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'
+            }`}
           >
             <Save className="w-4 h-4" />
-            <span>{ui.settings.saveSettingsButton}</span>
+            <span>{isSubmitting ? ui.feedback.saving : ui.settings.saveSettingsButton}</span>
           </button>
         </div>
       </form>
