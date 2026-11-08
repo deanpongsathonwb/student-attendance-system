@@ -1,12 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen, Calendar, Clock, Users, Award } from 'lucide-react';
 import ui from '../constants/ui.json';
 import { getCourses, getClassrooms, getStudents } from '../utils/dataStore';
+import { courseService } from '../services/courseService';
+import { studentService } from '../services/studentService';
+import type { Course, Classroom, Student } from '../types/common.types';
 
 export const TeacherCoursesPage: React.FC = () => {
-  const courses = getCourses();
-  const classrooms = getClassrooms();
-  const allStudents = getStudents();
+  const [courses, setCourses] = useState<Course[]>(() => getCourses());
+  const [classrooms, setClassrooms] = useState<Classroom[]>(() => getClassrooms());
+  const [allStudents, setAllStudents] = useState<Student[]>(() => getStudents());
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([
+      courseService.getCourses(),
+      courseService.getClassrooms(),
+      studentService.getStudents(),
+    ]).then(([crs, cls, stds]) => {
+      if (isMounted) {
+        if (crs) setCourses(crs);
+        if (cls) setClassrooms(cls);
+        if (stds) setAllStudents(stds);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="space-y-6">

@@ -64,14 +64,24 @@ export const AdminStudentsPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  // Cross-tab concurrency synchronization
+  // Initial fetch and cross-tab concurrency synchronization
   useEffect(() => {
+    let isMounted = true;
+    studentService.getStudents().then((res) => {
+      if (isMounted && res) {
+        setStudents(res);
+      }
+    });
+
     const unsubscribe = studentService.subscribe((updated) => {
-      if (updated) {
+      if (updated && isMounted) {
         setStudents(updated);
       }
     });
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   const handleSaveStudent = async (e: React.FormEvent) => {
@@ -107,7 +117,8 @@ export const AdminStudentsPage: React.FC = () => {
         });
       }
 
-      setStudents(studentService.getStudents());
+      const freshStudents = await studentService.getStudents();
+      setStudents(freshStudents);
       setFeedbackMessage(ui.messages.studentSaved);
       setIsModalOpen(false);
       setTimeout(() => setFeedbackMessage(''), 3000);
@@ -121,7 +132,8 @@ export const AdminStudentsPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       await studentService.deleteStudent(studentId);
-      setStudents(studentService.getStudents());
+      const freshStudents = await studentService.getStudents();
+      setStudents(freshStudents);
       setFeedbackMessage(ui.messages.studentDeleted);
       setTimeout(() => setFeedbackMessage(''), 3000);
     } finally {

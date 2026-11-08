@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Phone, MessageSquare, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import ui from '../constants/ui.json';
 import {
@@ -8,12 +8,34 @@ import {
   getStoredCurrentUser,
   getStudentAvatar,
 } from '../utils/dataStore';
-import type { Student } from '../types/common.types';
+import { courseService } from '../services/courseService';
+import { studentService } from '../services/studentService';
+import { attendanceService } from '../services/attendanceService';
+import type { Student, Classroom } from '../types/common.types';
 
 export const AdvisorAbsenceFollowupPage: React.FC = () => {
   const currentUser = getStoredCurrentUser();
-  const classrooms = getClassrooms();
-  const allStudents = getStudents();
+  const [classrooms, setClassrooms] = useState<Classroom[]>(() => getClassrooms());
+  const [allStudents, setAllStudents] = useState<Student[]>(() => getStudents());
+  const [attendanceData, setAttendanceData] = useState(() => getAttendanceData());
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([
+      courseService.getClassrooms(),
+      studentService.getStudents(),
+      attendanceService.getAttendanceData(),
+    ]).then(([cls, stds, att]) => {
+      if (isMounted) {
+        if (cls) setClassrooms(cls);
+        if (stds) setAllStudents(stds);
+        if (att) setAttendanceData(att);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const advisoryClass = useMemo(
     () =>
@@ -32,8 +54,7 @@ export const AdvisorAbsenceFollowupPage: React.FC = () => {
 
   // Identify students with attendance issues (absent, late, leave)
   const followupStudents = useMemo(() => {
-    const data = getAttendanceData();
-    const homeroom = data.homeroomRecords.find((r) => r.classroomId === advisoryClass?.id);
+    const homeroom = attendanceData.homeroomRecords.find((r) => r.classroomId === advisoryClass?.id);
 
     return students.map((s) => {
       const entry = homeroom?.entries.find((e) => e.studentId === s.id);
@@ -45,7 +66,7 @@ export const AdvisorAbsenceFollowupPage: React.FC = () => {
         remarks,
       };
     }).filter((item) => item.status === 'absent' || item.status === 'late' || item.status === 'leave');
-  }, [students, advisoryClass]);
+  }, [students, advisoryClass, attendanceData]);
 
   const handleSendNotification = () => {
     setNotificationSent(true);

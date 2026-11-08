@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { ROUTES } from '../constants/routes';
 import { MainLayout } from '../components/layout/MainLayout';
 import { LoginPage } from '../pages/LoginPage';
+import { AccountSetupPage } from '../pages/AccountSetupPage';
 import { TeacherAttendancePage } from '../pages/TeacherAttendancePage';
 import { TeacherReportsPage } from '../pages/TeacherReportsPage';
 import { TeacherCoursesPage } from '../pages/TeacherCoursesPage';
@@ -12,8 +13,8 @@ import { AdvisorAbsenceFollowupPage } from '../pages/AdvisorAbsenceFollowupPage'
 import { AdminOverviewPage } from '../pages/AdminOverviewPage';
 import { AdminStudentsPage } from '../pages/AdminStudentsPage';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
+import { settingsService } from '../services/settingsService';
 import type { Role } from '../types/common.types';
-
 import { useAuthStore } from '../stores/auth.store';
 
 // Helper to get role default path
@@ -54,9 +55,34 @@ export const ProtectedRouteGuard: React.FC<ProtectedRouteGuardProps> = ({ allowe
 // Root index redirector
 export const RootRedirect: React.FC = () => {
   const { user } = useAuthStore();
+  const [initChecked, setInitChecked] = useState(false);
+  const [isInit, setIsInit] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    settingsService.isInitialized().then((initialized) => {
+      if (isMounted) {
+        setIsInit(initialized);
+        setInitChecked(true);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  if (!initChecked) {
+    return React.createElement('div', { className: 'min-h-screen bg-slate-100' });
+  }
+
+  if (!isInit) {
+    return React.createElement(Navigate, { to: ROUTES.PUBLIC.SETUP, replace: true });
+  }
+
   if (!user) {
     return React.createElement(Navigate, { to: ROUTES.PUBLIC.LOGIN, replace: true });
   }
+
   return React.createElement(Navigate, { to: getRoleHomePath(user.role), replace: true });
 };
 
@@ -64,6 +90,10 @@ export const routesConfig = [
   {
     path: '/',
     element: React.createElement(RootRedirect, null),
+  },
+  {
+    path: ROUTES.PUBLIC.SETUP,
+    element: React.createElement(AccountSetupPage, null),
   },
   {
     element: React.createElement(PublicRouteGuard, null),
@@ -130,6 +160,6 @@ export const routesConfig = [
   },
   {
     path: '*',
-    element: React.createElement(RootRedirect, null),
+    element: React.createElement(Navigate, { to: '/', replace: true }),
   },
 ];

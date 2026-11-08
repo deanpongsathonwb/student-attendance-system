@@ -1,5 +1,3 @@
-import initialUsers from '../seed/users.json';
-import imagesData from '../seed/images.json';
 import { settingsService } from '../services/settingsService';
 import { studentService } from '../services/studentService';
 import { attendanceService } from '../services/attendanceService';
@@ -16,7 +14,7 @@ import type {
 } from '../types/common.types';
 
 export function getStoredSettings(): SystemSettings {
-  return settingsService.getSettings();
+  return settingsService.getSettingsSync();
 }
 
 export function saveStoredSettings(newSettings: SystemSettings): void {
@@ -36,23 +34,20 @@ export function setStoredCurrentUser(user: User | null): void {
 }
 
 export function getUsers(): User[] {
-  return initialUsers as User[];
+  const current = authStore.getState().user;
+  return current ? [current] : [];
 }
 
 export function getClassrooms(): Classroom[] {
-  return courseService.getClassrooms();
+  return courseService.getClassroomsSync();
 }
 
 export function getStudents(): Student[] {
-  return studentService.getStudents();
-}
-
-export function saveStudents(students: Student[]): void {
-  studentService.saveStudents(students);
+  return studentService.getStudentsSync();
 }
 
 export function getCourses(): Course[] {
-  return courseService.getCourses();
+  return courseService.getCoursesSync();
 }
 
 interface AttendanceStore {
@@ -61,25 +56,13 @@ interface AttendanceStore {
 }
 
 export function getAttendanceData(): AttendanceStore {
-  return attendanceService.getAttendanceData();
+  return attendanceService.getAttendanceDataSync();
 }
 
-export function saveAttendanceData(data: AttendanceStore): void {
-  attendanceService.saveAttendanceData(data);
+export function getUserAvatar(_userId: string): string {
+  return '/favicon.svg';
 }
 
-export function getUserAvatar(userId: string): string {
-  const users = imagesData.users as Record<string, string>;
-  if (users[userId]) {
-    return users[userId];
-  }
-  return imagesData.placeholders.defaultAvatar;
-}
-
-export function getStudentAvatar(studentId: string): string {
-  const students = imagesData.students as Record<string, string>;
-  if (students[studentId]) {
-    return students[studentId];
-  }
-  return imagesData.placeholders.defaultAvatar;
+export function getStudentAvatar(_studentId: string): string {
+  return '/favicon.svg';
 }

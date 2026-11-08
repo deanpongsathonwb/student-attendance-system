@@ -16,6 +16,7 @@ export function isInternalRedirect(path: string): boolean {
   const validPaths = [
     '/',
     ROUTES.PUBLIC.LOGIN,
+    ROUTES.PUBLIC.SETUP,
     ROUTES.TEACHER.ATTENDANCE,
     ROUTES.TEACHER.REPORTS,
     ROUTES.TEACHER.COURSES,

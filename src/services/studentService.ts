@@ -1,76 +1,160 @@
-import initialStudents from '../seed/students.json';
-import { STORAGE_KEYS } from '../constants/storage';
-import { localStorageService } from '../storage/localStorage/localStorage.service';
+import { supabase } from './supabaseClient';
+import { stripUndefined, handleDbError } from './dbHelper';
 import { sanitizeString } from '../security/xss/sanitizer';
 import { asyncMutex } from './concurrency/asyncMutex';
+import { localStorageService } from '../storage/localStorage/localStorage.service';
+import { STORAGE_KEYS } from '../constants/storage';
 import type { Student } from '../types/common.types';
 
 export const studentService = {
-  getStudents(): Student[] {
+  getStudentsSync(): Student[] {
     return localStorageService.getItem<Student[]>(
       STORAGE_KEYS.STUDENTS_CACHE,
-      initialStudents as Student[]
+      []
     );
   },
 
-  saveStudents(students: Student[]): void {
-    localStorageService.setItem(STORAGE_KEYS.STUDENTS_CACHE, students);
+  async getStudents(): Promise<Student[]> {
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .order('seat_number', { ascending: true });
+
+      if (error) {
+        handleDbError(error, 'getStudents');
+      }
+
+      if (data) {
+        const mapped: Student[] = data.map((s) => ({
+          id: s.id,
+          studentCode: s.student_code,
+          classroomId: s.classroom_id,
+          seatNumber: s.seat_number,
+          fullName: s.full_name,
+          parentName: s.parent_name,
+          parentPhone: s.parent_phone,
+          parentRelation: s.parent_relation,
+        }));
+        localStorageService.setItem(STORAGE_KEYS.STUDENTS_CACHE, mapped);
+        return mapped;
+      }
+    } catch (err) {
+      handleDbError(err, 'getStudents');
+    }
+    return [];
   },
 
   async createStudent(data: Omit<Student, 'id'>): Promise<Student> {
     return asyncMutex.withLock('students_mutation_lock', async () => {
-      const students = this.getStudents();
-      const newStudent: Student = {
-        id: `std_${Date.now()}`,
-        studentCode: sanitizeString(data.studentCode),
-        fullName: sanitizeString(data.fullName),
-        seatNumber: Number(data.seatNumber),
-        classroomId: data.classroomId,
-        parentName: sanitizeString(data.parentName),
-        parentRelation: sanitizeString(data.parentRelation),
-        parentPhone: sanitizeString(data.parentPhone),
+      const newId = `std_${Date.now()}`;
+      const payload = stripUndefined({
+        id: newId,
+        student_code: sanitizeString(data.studentCode),
+        full_name: sanitizeString(data.fullName),
+        seat_number: Number(data.seatNumber),
+        classroom_id: data.classroomId,
+        parent_name: sanitizeString(data.parentName),
+        parent_relation: sanitizeString(data.parentRelation),
+        parent_phone: sanitizeString(data.parentPhone),
+      });
+
+      const { error } = await supabase.from('students').insert(payload);
+      if (error) {
+        handleDbError(error, 'createStudent');
+      }
+
+      // Verify write by reading back persisted record
+      const { data: persisted, error: readError } = await supabase
+        .from('students')
+        .select('*')
+        .eq('id', newId)
+        .single();
+
+      if (readError || !persisted) {
+        handleDbError(readError || new Error('Record verification failed'), 'verifyCreateStudent');
+      }
+
+      const created: Student = {
+        id: persisted.id,
+        studentCode: persisted.student_code,
+        classroomId: persisted.classroom_id,
+        seatNumber: persisted.seat_number,
+        fullName: persisted.full_name,
+        parentName: persisted.parent_name,
+        parentPhone: persisted.parent_phone,
+        parentRelation: persisted.parent_relation,
       };
-      const updated = [...students, newStudent];
-      this.saveStudents(updated);
-      return newStudent;
+
+      // Refresh cache
+      await this.getStudents();
+      return created;
     });
   },
 
   async updateStudent(id: string, data: Partial<Omit<Student, 'id'>>): Promise<Student | null> {
     return asyncMutex.withLock('students_mutation_lock', async () => {
-      const students = this.getStudents();
-      const index = students.findIndex((s) => s.id === id);
-      if (index === -1) {
-        return null;
+      const payload = stripUndefined({
+        student_code: data.studentCode !== undefined ? sanitizeString(data.studentCode) : undefined,
+        full_name: data.fullName !== undefined ? sanitizeString(data.fullName) : undefined,
+        seat_number: data.seatNumber !== undefined ? Number(data.seatNumber) : undefined,
+        classroom_id: data.classroomId !== undefined ? data.classroomId : undefined,
+        parent_name: data.parentName !== undefined ? sanitizeString(data.parentName) : undefined,
+        parent_relation: data.parentRelation !== undefined ? sanitizeString(data.parentRelation) : undefined,
+        parent_phone: data.parentPhone !== undefined ? sanitizeString(data.parentPhone) : undefined,
+      });
+
+      const { error } = await supabase
+        .from('students')
+        .update(payload)
+        .eq('id', id);
+
+      if (error) {
+        handleDbError(error, 'updateStudent');
       }
 
-      const current = students[index];
-      const updatedStudent: Student = {
-        ...current,
-        studentCode: data.studentCode !== undefined ? sanitizeString(data.studentCode) : current.studentCode,
-        fullName: data.fullName !== undefined ? sanitizeString(data.fullName) : current.fullName,
-        seatNumber: data.seatNumber !== undefined ? Number(data.seatNumber) : current.seatNumber,
-        classroomId: data.classroomId !== undefined ? data.classroomId : current.classroomId,
-        parentName: data.parentName !== undefined ? sanitizeString(data.parentName) : current.parentName,
-        parentRelation: data.parentRelation !== undefined ? sanitizeString(data.parentRelation) : current.parentRelation,
-        parentPhone: data.parentPhone !== undefined ? sanitizeString(data.parentPhone) : current.parentPhone,
+      // Verify update
+      const { data: persisted, error: readError } = await supabase
+        .from('students')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (readError || !persisted) {
+        handleDbError(readError || new Error('Record verification failed'), 'verifyUpdateStudent');
+      }
+
+      const updated: Student = {
+        id: persisted.id,
+        studentCode: persisted.student_code,
+        classroomId: persisted.classroom_id,
+        seatNumber: persisted.seat_number,
+        fullName: persisted.full_name,
+        parentName: persisted.parent_name,
+        parentPhone: persisted.parent_phone,
+        parentRelation: persisted.parent_relation,
       };
 
-      students[index] = updatedStudent;
-      this.saveStudents(students);
-      return updatedStudent;
+      // Refresh cache
+      await this.getStudents();
+      return updated;
     });
   },
 
   async deleteStudent(id: string): Promise<boolean> {
     return asyncMutex.withLock('students_mutation_lock', async () => {
-      const students = this.getStudents();
-      const filtered = students.filter((s) => s.id !== id);
-      if (filtered.length !== students.length) {
-        this.saveStudents(filtered);
-        return true;
+      const { error } = await supabase
+        .from('students')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        handleDbError(error, 'deleteStudent');
       }
-      return false;
+
+      // Refresh cache
+      await this.getStudents();
+      return true;
     });
   },
 

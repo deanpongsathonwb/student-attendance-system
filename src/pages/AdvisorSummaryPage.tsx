@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Users, FileSpreadsheet, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import ui from '../constants/ui.json';
 import {
@@ -9,12 +9,38 @@ import {
   getStoredCurrentUser,
   getStudentAvatar,
 } from '../utils/dataStore';
+import { courseService } from '../services/courseService';
+import { studentService } from '../services/studentService';
+import { settingsService } from '../services/settingsService';
+import { attendanceService } from '../services/attendanceService';
+import type { Classroom, Student, SystemSettings } from '../types/common.types';
 
 export const AdvisorSummaryPage: React.FC = () => {
   const currentUser = getStoredCurrentUser();
-  const classrooms = getClassrooms();
-  const allStudents = getStudents();
-  const settings = getStoredSettings();
+  const [classrooms, setClassrooms] = useState<Classroom[]>(() => getClassrooms());
+  const [allStudents, setAllStudents] = useState<Student[]>(() => getStudents());
+  const [settings, setSettings] = useState<SystemSettings>(() => getStoredSettings());
+  const [attendanceData, setAttendanceData] = useState(() => getAttendanceData());
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([
+      courseService.getClassrooms(),
+      studentService.getStudents(),
+      settingsService.getSettings(),
+      attendanceService.getAttendanceData(),
+    ]).then(([cls, stds, stg, att]) => {
+      if (isMounted) {
+        if (cls) setClassrooms(cls);
+        if (stds) setAllStudents(stds);
+        if (stg) setSettings(stg);
+        if (att) setAttendanceData(att);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const advisoryClass = useMemo(
     () =>
@@ -29,8 +55,7 @@ export const AdvisorSummaryPage: React.FC = () => {
   );
 
   const reportRows = useMemo(() => {
-    const data = getAttendanceData();
-    const records = data.homeroomRecords.filter((r) => r.classroomId === advisoryClass?.id);
+    const records = attendanceData.homeroomRecords.filter((r) => r.classroomId === advisoryClass?.id);
     const totalSessions = Math.max(records.length, 1);
 
     return students.map((s) => {
@@ -75,7 +100,7 @@ export const AdvisorSummaryPage: React.FC = () => {
         statusColor,
       };
     });
-  }, [students, advisoryClass, settings]);
+  }, [students, advisoryClass, settings, attendanceData]);
 
   return (
     <div className="space-y-6">

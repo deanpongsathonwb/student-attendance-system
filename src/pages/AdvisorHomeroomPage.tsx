@@ -10,14 +10,37 @@ import {
   getStudentAvatar,
 } from '../utils/dataStore';
 import { attendanceService } from '../services/attendanceService';
+import { courseService } from '../services/courseService';
+import { studentService } from '../services/studentService';
+import { settingsService } from '../services/settingsService';
 import { sanitizeString } from '../security/xss/sanitizer';
-import type { AttendanceStatus, AttendanceEntry } from '../types/common.types';
+import type { AttendanceStatus, AttendanceEntry, Classroom, Student, SystemSettings } from '../types/common.types';
 
 export const AdvisorHomeroomPage: React.FC = () => {
   const currentUser = getStoredCurrentUser();
-  const classrooms = getClassrooms();
-  const allStudents = getStudents();
-  const settings = getStoredSettings();
+  const [classrooms, setClassrooms] = useState<Classroom[]>(() => getClassrooms());
+  const [allStudents, setAllStudents] = useState<Student[]>(() => getStudents());
+  const [settings, setSettings] = useState<SystemSettings>(() => getStoredSettings());
+
+  // Initial fetch from Supabase
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([
+      courseService.getClassrooms(),
+      studentService.getStudents(),
+      settingsService.getSettings(),
+      attendanceService.getAttendanceData(),
+    ]).then(([cls, stds, stg]) => {
+      if (isMounted) {
+        if (cls) setClassrooms(cls);
+        if (stds) setAllStudents(stds);
+        if (stg) setSettings(stg);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const advisoryClass = useMemo(
     () =>
@@ -58,6 +81,30 @@ export const AdvisorHomeroomPage: React.FC = () => {
     }
     return map;
   });
+
+  // Re-sync entries when selectedDate, advisoryClass, or students change
+  useEffect(() => {
+    const data = getAttendanceData();
+    const existing = data.homeroomRecords.find(
+      (r) => r.classroomId === (advisoryClass?.id || '') && r.date === selectedDate
+    );
+    const map: Record<string, AttendanceEntry> = {};
+    if (existing) {
+      existing.entries.forEach((e) => {
+        map[e.studentId] = { ...e };
+      });
+    } else {
+      students.forEach((s) => {
+        map[s.id] = {
+          studentId: s.id,
+          status: 'present',
+          checkTime: '07:45',
+          remarks: '',
+        };
+      });
+    }
+    setEntries(map);
+  }, [advisoryClass, selectedDate, students]);
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     setEntries((prev) => ({
@@ -138,7 +185,7 @@ export const AdvisorHomeroomPage: React.FC = () => {
       await attendanceService.saveHomeroomAttendance(
         advisoryClass?.id || '',
         selectedDate,
-        currentUser?.id || 'usr_advisor_01',
+        currentUser?.id || 'u-primary',
         '07:55',
         recordEntries
       );

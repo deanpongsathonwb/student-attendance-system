@@ -1,6 +1,7 @@
 export const ROUTES = {
   PUBLIC: {
     LOGIN: '/login',
+    SETUP: '/setup',
   },
   TEACHER: {
     ATTENDANCE: '/teacher/attendance',

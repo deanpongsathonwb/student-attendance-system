@@ -187,10 +187,37 @@
         ]
       },
       {
+        "name": "roles",
+        "description": "Role definitions with customizable permissions matrix",
+        "columns": [
+          { "name": "id", "type": "text", "primaryKey": true },
+          { "name": "name", "type": "text", "unique": true, "nullable": false },
+          { "name": "description", "type": "text", "default": "''", "nullable": false },
+          { "name": "permissions", "type": "jsonb", "default": "'[]'", "nullable": false }
+        ]
+      },
+      {
+        "name": "accounts",
+        "description": "User accounts with permission-based role assignments and primary account support",
+        "columns": [
+          { "name": "id", "type": "text", "primaryKey": true },
+          { "name": "username", "type": "text", "unique": true, "nullable": false },
+          { "name": "password_hash", "type": "text", "nullable": true },
+          { "name": "name", "type": "text", "default": "''", "nullable": false },
+          { "name": "email", "type": "text", "default": "''", "nullable": false },
+          { "name": "is_primary_account", "type": "boolean", "default": false, "nullable": false },
+          { "name": "must_set_password", "type": "boolean", "default": true, "nullable": false },
+          { "name": "role_id", "type": "text", "nullable": true, "references": "public.roles(id) ON DELETE SET NULL" },
+          { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false },
+          { "name": "updated_at", "type": "timestamptz", "default": "now()", "nullable": false }
+        ]
+      },
+      {
         "name": "system_settings",
         "description": "Global school organization settings, academic cycle, and thresholds",
         "columns": [
           { "name": "id", "type": "text", "primaryKey": true, "default": "'default'" },
+          { "name": "is_system_initialized", "type": "boolean", "default": false, "nullable": false },
           { "name": "system_owner", "type": "text", "nullable": false },
           { "name": "academic_year", "type": "text", "nullable": false },
           { "name": "semester", "type": "text", "nullable": false },
@@ -472,19 +499,15 @@
       "homeroom_attendance_records",
       "homeroom_attendance_entries",
       "students",
-      "system_settings"
+      "system_settings",
+      "accounts",
+      "roles"
     ]
   },
   "seedMappings": {
-    "sourceFiles": [
-      "src/seed/users.json",
-      "src/seed/classrooms.json",
-      "src/seed/courses.json",
-      "src/seed/students.json",
-      "src/seed/attendance.json",
-      "src/seed/settings.json",
-      "src/seed/images.json"
-    ]
+    "status": "completed",
+    "migratedToSupabase": true,
+    "sourceFilesRemoved": true
   },
   "migrationSql": "-- Enable extensions\nCREATE EXTENSION IF NOT EXISTS \"pgcrypto\";\n\n-- Create Enums\nDO $$ BEGIN\n  CREATE TYPE public.user_role AS ENUM ('teacher', 'advisor', 'admin');\nEXCEPTION\n  WHEN duplicate_object THEN NULL;\nEND $$;\n\nDO $$ BEGIN\n  CREATE TYPE public.attendance_status AS ENUM ('present', 'late', 'absent', 'leave', 'activity');\nEXCEPTION\n  WHEN duplicate_object THEN NULL;\nEND $$;\n\n-- Utility trigger function for timestamps\nCREATE OR REPLACE FUNCTION public.handle_updated_at()\nRETURNS TRIGGER AS $$\nBEGIN\n  NEW.updated_at = NOW();\n  RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;\n\n-- Utility trigger function for Optimistic Concurrency Control\nCREATE OR REPLACE FUNCTION public.handle_concurrency_version()\nRETURNS TRIGGER AS $$\nBEGIN\n  NEW.version = OLD.version + 1;\n  RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;\n\n-- 1. Classrooms Table\nCREATE TABLE IF NOT EXISTS public.classrooms (\n  id text PRIMARY KEY,\n  name text NOT NULL,\n  short_name text NOT NULL,\n  grade_level text NOT NULL,\n  room_number text NOT NULL,\n  advisor_id uuid,\n  total_students integer DEFAULT 0 NOT NULL,\n  created_at timestamptz DEFAULT now() NOT NULL,\n  updated_at timestamptz DEFAULT now() NOT NULL\n);\n\n-- 2. Profiles Table\nCREATE TABLE IF NOT EXISTS public.profiles (\n  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,\n  username text UNIQUE NOT NULL,\n  role public.user_role NOT NULL,\n  full_name text NOT NULL,\n  position text,\n  department text,\n  email text UNIQUE NOT NULL,\n  advisory_classroom_id text REFERENCES public.classrooms(id) ON DELETE SET NULL,\n  avatar_url text,\n  created_at timestamptz DEFAULT now() NOT NULL,\n  updated_at timestamptz DEFAULT now() NOT NULL\n);\n\n-- Add Foreign Key from classrooms to profiles\nALTER TABLE public.classrooms\n  DROP CONSTRAINT IF EXISTS fk_classrooms_advisor,\n  ADD CONSTRAINT fk_classrooms_advisor FOREIGN KEY (advisor_id) REFERENCES public.profiles(id) ON DELETE SET NULL;\n\n-- 3. Students Table\nCREATE TABLE IF NOT EXISTS public.students (\n  id text PRIMARY KEY,\n  student_code text UNIQUE NOT NULL,\n  classroom_id text NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,\n  seat_number integer NOT NULL,\n  full_name text NOT NULL,\n  parent_name text NOT NULL,\n  parent_phone text NOT NULL,\n  parent_relation text NOT NULL,\n  avatar_url text,\n  created_at timestamptz DEFAULT now() NOT NULL,\n  updated_at timestamptz DEFAULT now() NOT NULL\n);\n\n-- 4. Courses Table\nCREATE TABLE IF NOT EXISTS public.courses (\n  id text PRIMARY KEY,\n  course_code text NOT NULL,\n  name text NOT NULL,\n  credits numeric(3,1) NOT NULL,\n  classroom_id text NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,\n  teacher_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,\n  day_of_week text NOT NULL,\n  period integer NOT NULL,\n  time_range text NOT NULL,\n  created_at timestamptz DEFAULT now() NOT NULL,\n  updated_at timestamptz DEFAULT now() NOT NULL\n);\n\n-- 5. Subject Attendance Records Table\nCREATE TABLE IF NOT EXISTS public.subject_attendance_records (\n  id text PRIMARY KEY,\n  course_id text NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,\n  classroom_id text NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,\n  date date NOT NULL,\n  period integer NOT NULL,\n  recorder_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,\n  version integer DEFAULT 1 NOT NULL,\n  created_at timestamptz DEFAULT now() NOT NULL,\n  updated_at timestamptz DEFAULT now() NOT NULL,\n  CONSTRAINT uq_subject_attendance UNIQUE (course_id, date, period)\n);\n\n-- 6. Subject Attendance Entries Table\nCREATE TABLE IF NOT EXISTS public.subject_attendance_entries (\n  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n  record_id text NOT NULL REFERENCES public.subject_attendance_records(id) ON DELETE CASCADE,\n  student_id text NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,\n  status public.attendance_status NOT NULL,\n  check_time text NOT NULL,\n  remarks text DEFAULT '' NOT NULL,\n  CONSTRAINT uq_subject_entry UNIQUE (record_id, student_id)\n);\n\n-- 7. Homeroom Attendance Records Table\nCREATE TABLE IF NOT EXISTS public.homeroom_attendance_records (\n  id text PRIMARY KEY,\n  classroom_id text NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,\n  date date NOT NULL,\n  recorder_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,\n  check_time text NOT NULL,\n  version integer DEFAULT 1 NOT NULL,\n  created_at timestamptz DEFAULT now() NOT NULL,\n  updated_at timestamptz DEFAULT now() NOT NULL,\n  CONSTRAINT uq_homeroom_attendance UNIQUE (classroom_id, date)\n);\n\n-- 8. Homeroom Attendance Entries Table\nCREATE TABLE IF NOT EXISTS public.homeroom_attendance_entries (\n  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n  record_id text NOT NULL REFERENCES public.homeroom_attendance_records(id) ON DELETE CASCADE,\n  student_id text NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,\n  status public.attendance_status NOT NULL,\n  check_time text NOT NULL,\n  remarks text DEFAULT '' NOT NULL,\n  CONSTRAINT uq_homeroom_entry UNIQUE (record_id, student_id)\n);\n\n-- 9. System Settings Table\nCREATE TABLE IF NOT EXISTS public.system_settings (\n  id text PRIMARY KEY DEFAULT 'default',\n  system_owner text NOT NULL,\n  academic_year text NOT NULL,\n  semester text NOT NULL,\n  morning_check_cutoff_time text NOT NULL,\n  late_threshold_minutes integer NOT NULL,\n  minimum_attendance_percentage numeric(4,1) NOT NULL,\n  enable_sms_alert boolean DEFAULT true NOT NULL,\n  enable_line_notification boolean DEFAULT true NOT NULL,\n  emergency_contact text NOT NULL,\n  auto_lock_attendance_hours integer DEFAULT 24 NOT NULL,\n  updated_at timestamptz DEFAULT now() NOT NULL\n);\n\n-- Performance Indexes\nCREATE INDEX IF NOT EXISTS idx_classrooms_advisor ON public.classrooms(advisor_id);\nCREATE INDEX IF NOT EXISTS idx_students_classroom_seat ON public.students(classroom_id, seat_number);\nCREATE INDEX IF NOT EXISTS idx_courses_classroom ON public.courses(classroom_id);\nCREATE INDEX IF NOT EXISTS idx_courses_teacher ON public.courses(teacher_id);\nCREATE INDEX IF NOT EXISTS idx_subject_attendance_lookup ON public.subject_attendance_records(course_id, date);\nCREATE INDEX IF NOT EXISTS idx_subject_attendance_classroom ON public.subject_attendance_records(classroom_id, date);\nCREATE INDEX IF NOT EXISTS idx_subject_entries_record ON public.subject_attendance_entries(record_id);\nCREATE INDEX IF NOT EXISTS idx_subject_entries_student ON public.subject_attendance_entries(student_id);\nCREATE INDEX IF NOT EXISTS idx_homeroom_attendance_lookup ON public.homeroom_attendance_records(classroom_id, date);\nCREATE INDEX IF NOT EXISTS idx_homeroom_entries_record ON public.homeroom_attendance_entries(record_id);\nCREATE INDEX IF NOT EXISTS idx_homeroom_entries_student ON public.homeroom_attendance_entries(student_id);\n\n-- Attach Updated At Triggers\nCREATE OR REPLACE TRIGGER trg_classrooms_updated BEFORE UPDATE ON public.classrooms FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();\nCREATE OR REPLACE TRIGGER trg_profiles_updated BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();\nCREATE OR REPLACE TRIGGER trg_students_updated BEFORE UPDATE ON public.students FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();\nCREATE OR REPLACE TRIGGER trg_courses_updated BEFORE UPDATE ON public.courses FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();\nCREATE OR REPLACE TRIGGER trg_subject_records_updated BEFORE UPDATE ON public.subject_attendance_records FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();\nCREATE OR REPLACE TRIGGER trg_homeroom_records_updated BEFORE UPDATE ON public.homeroom_attendance_records FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();\nCREATE OR REPLACE TRIGGER trg_settings_updated BEFORE UPDATE ON public.system_settings FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();\n\n-- Attach Concurrency Version Triggers\nCREATE OR REPLACE TRIGGER trg_subject_records_version BEFORE UPDATE ON public.subject_attendance_records FOR EACH ROW EXECUTE FUNCTION public.handle_concurrency_version();\nCREATE OR REPLACE TRIGGER trg_homeroom_records_version BEFORE UPDATE ON public.homeroom_attendance_records FOR EACH ROW EXECUTE FUNCTION public.handle_concurrency_version();\n\n-- Enable Row Level Security (RLS)\nALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.classrooms ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.students ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.courses ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.subject_attendance_records ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.subject_attendance_entries ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.homeroom_attendance_records ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.homeroom_attendance_entries ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;\n\n-- Grant API Access\nGRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;\nGRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;\n\n-- Enable Realtime Replication\nALTER PUBLICATION supabase_realtime ADD TABLE public.subject_attendance_records;\nALTER PUBLICATION supabase_realtime ADD TABLE public.subject_attendance_entries;\nALTER PUBLICATION supabase_realtime ADD TABLE public.homeroom_attendance_records;\nALTER PUBLICATION supabase_realtime ADD TABLE public.homeroom_attendance_entries;\nALTER PUBLICATION supabase_realtime ADD TABLE public.students;\nALTER PUBLICATION supabase_realtime ADD TABLE public.system_settings;\n"
 }

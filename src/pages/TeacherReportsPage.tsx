@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { BookOpen, CheckCircle, AlertTriangle, XCircle, FileSpreadsheet } from 'lucide-react';
 import ui from '../constants/ui.json';
 import {
@@ -9,14 +9,47 @@ import {
   getStoredSettings,
   getStudentAvatar,
 } from '../utils/dataStore';
+import { courseService } from '../services/courseService';
+import { studentService } from '../services/studentService';
+import { settingsService } from '../services/settingsService';
+import { attendanceService } from '../services/attendanceService';
+import type { Course, Classroom, Student, SystemSettings } from '../types/common.types';
 
 export const TeacherReportsPage: React.FC = () => {
-  const courses = getCourses();
-  const classrooms = getClassrooms();
-  const allStudents = getStudents();
-  const settings = getStoredSettings();
+  const [courses, setCourses] = useState<Course[]>(() => getCourses());
+  const [classrooms, setClassrooms] = useState<Classroom[]>(() => getClassrooms());
+  const [allStudents, setAllStudents] = useState<Student[]>(() => getStudents());
+  const [settings, setSettings] = useState<SystemSettings>(() => getStoredSettings());
+  const [attendanceData, setAttendanceData] = useState(() => getAttendanceData());
 
-  const [selectedCourseId, setSelectedCourseId] = useState<string>(courses[0]?.id || '');
+  const [selectedCourseId, setSelectedCourseId] = useState<string>(() => courses[0]?.id || '');
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([
+      courseService.getCourses(),
+      courseService.getClassrooms(),
+      studentService.getStudents(),
+      settingsService.getSettings(),
+      attendanceService.getAttendanceData(),
+    ]).then(([crs, cls, stds, stg, att]) => {
+      if (isMounted) {
+        if (crs && crs.length > 0) {
+          setCourses(crs);
+          if (!selectedCourseId) {
+            setSelectedCourseId(crs[0].id);
+          }
+        }
+        if (cls) setClassrooms(cls);
+        if (stds) setAllStudents(stds);
+        if (stg) setSettings(stg);
+        if (att) setAttendanceData(att);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const selectedCourse = useMemo(
     () => courses.find((c) => c.id === selectedCourseId) || courses[0],
@@ -35,8 +68,7 @@ export const TeacherReportsPage: React.FC = () => {
 
   // Compute stats per student
   const reportRows = useMemo(() => {
-    const data = getAttendanceData();
-    const records = data.subjectRecords.filter((r) => r.courseId === selectedCourseId);
+    const records = attendanceData.subjectRecords.filter((r) => r.courseId === selectedCourseId);
     const totalSessions = Math.max(records.length, 1);
 
     return students.map((s) => {
@@ -82,7 +114,7 @@ export const TeacherReportsPage: React.FC = () => {
         statusColor,
       };
     });
-  }, [students, selectedCourseId, settings]);
+  }, [students, selectedCourseId, settings, attendanceData]);
 
   const atRiskStudents = reportRows.filter(
     (r) => r.rate < settings.minimumAttendancePercentage + 5

@@ -9,18 +9,46 @@ import {
   getStudentAvatar,
 } from '../utils/dataStore';
 import { attendanceService } from '../services/attendanceService';
+import { courseService } from '../services/courseService';
+import { studentService } from '../services/studentService';
+import { authStore } from '../stores/auth.store';
 import { sanitizeString } from '../security/xss/sanitizer';
-import type { AttendanceStatus, AttendanceEntry } from '../types/common.types';
+import type { AttendanceStatus, AttendanceEntry, Course, Classroom, Student } from '../types/common.types';
 
 export const TeacherAttendancePage: React.FC = () => {
-  const courses = getCourses();
-  const classrooms = getClassrooms();
-  const allStudents = getStudents();
+  const [courses, setCourses] = useState<Course[]>(() => getCourses());
+  const [classrooms, setClassrooms] = useState<Classroom[]>(() => getClassrooms());
+  const [allStudents, setAllStudents] = useState<Student[]>(() => getStudents());
 
-  const [selectedCourseId, setSelectedCourseId] = useState<string>(courses[0]?.id || '');
+  const [selectedCourseId, setSelectedCourseId] = useState<string>(() => courses[0]?.id || '');
   const [selectedDate, setSelectedDate] = useState<string>('2026-11-02');
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Initial fetch from Supabase
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([
+      courseService.getCourses(),
+      courseService.getClassrooms(),
+      studentService.getStudents(),
+      attendanceService.getAttendanceData(),
+    ]).then(([crs, cls, stds, att]) => {
+      if (isMounted) {
+        if (crs && crs.length > 0) {
+          setCourses(crs);
+          if (!selectedCourseId) {
+            setSelectedCourseId(crs[0].id);
+          }
+        }
+        if (cls) setClassrooms(cls);
+        if (stds) setAllStudents(stds);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const selectedCourse = useMemo(
     () => courses.find((c) => c.id === selectedCourseId) || courses[0],
@@ -60,6 +88,30 @@ export const TeacherAttendancePage: React.FC = () => {
     }
     return map;
   });
+
+  // Re-sync entries when selectedCourseId, selectedDate, or students change
+  useEffect(() => {
+    const data = getAttendanceData();
+    const existing = data.subjectRecords.find(
+      (r) => r.courseId === selectedCourseId && r.date === selectedDate
+    );
+    const map: Record<string, AttendanceEntry> = {};
+    if (existing) {
+      existing.entries.forEach((e) => {
+        map[e.studentId] = { ...e };
+      });
+    } else {
+      students.forEach((s) => {
+        map[s.id] = {
+          studentId: s.id,
+          status: 'present',
+          checkTime: '08:30',
+          remarks: '',
+        };
+      });
+    }
+    setEntries(map);
+  }, [selectedCourseId, selectedDate, students]);
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     setEntries((prev) => ({
@@ -137,12 +189,13 @@ export const TeacherAttendancePage: React.FC = () => {
         };
       });
 
+      const currentUserId = authStore.getState().user?.id || 'u-primary';
       await attendanceService.saveSubjectAttendance(
         selectedCourseId,
         selectedCourse?.classroomId || '',
         selectedDate,
         selectedCourse?.period || 1,
-        'usr_teacher_01',
+        currentUserId,
         recordEntries
       );
 

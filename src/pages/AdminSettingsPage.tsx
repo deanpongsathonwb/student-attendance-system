@@ -1,25 +1,49 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Save, CheckCircle2, ShieldCheck, Bell, School } from 'lucide-react';
+import { Settings as SettingsIcon, Save, CheckCircle2, ShieldCheck, Bell, School, RotateCcw, AlertTriangle } from 'lucide-react';
 import ui from '../constants/ui.json';
 import { getStoredSettings } from '../utils/dataStore';
 import { settingsService } from '../services/settingsService';
 import { sanitizeString } from '../security/xss/sanitizer';
+import { ROUTES } from '../constants/routes';
 import type { SystemSettings } from '../types/common.types';
 
 export const AdminSettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<SystemSettings>(() => getStoredSettings());
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isResetting, setIsResetting] = useState<boolean>(false);
+  const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
 
-  // Cross-tab concurrency synchronization
+  // Initial fetch and cross-tab concurrency synchronization
   useEffect(() => {
+    let isMounted = true;
+    settingsService.getSettings().then((res) => {
+      if (isMounted && res) {
+        setSettings(res);
+      }
+    });
+
     const unsubscribe = settingsService.subscribe((newSettings) => {
-      if (newSettings) {
+      if (newSettings && isMounted) {
         setSettings(newSettings);
       }
     });
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
+
+  const handleReset = async () => {
+    setIsResetting(true);
+    try {
+      await settingsService.resetSystemInitialization();
+      window.location.href = ROUTES.PUBLIC.SETUP;
+    } finally {
+      setIsResetting(false);
+      setShowResetConfirm(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -292,6 +316,51 @@ export const AdminSettingsPage: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {/* Reset System Initialization Card */}
+      <div className="bg-white rounded-xl border border-rose-200 shadow-xs p-6 space-y-3">
+        <h3 className="text-sm font-bold text-rose-900 flex items-center gap-2">
+          <RotateCcw className="w-4 h-4 text-rose-600" />
+          <span>{ui.setup.resetButton}</span>
+        </h3>
+        <p className="text-xs text-slate-600 leading-relaxed break-words">
+          {ui.setup.resetWarning}
+        </p>
+
+        {!showResetConfirm ? (
+          <button
+            type="button"
+            onClick={() => setShowResetConfirm(true)}
+            className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+          >
+            {ui.setup.resetButton}
+          </button>
+        ) : (
+          <div className="p-4 bg-rose-50 border border-rose-300 rounded-xl space-y-3">
+            <p className="text-xs font-semibold text-rose-900 flex items-center gap-2 leading-relaxed break-words">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span>{ui.setup.resetConfirm}</span>
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={isResetting}
+                onClick={handleReset}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+              >
+                {isResetting ? ui.setup.submitting : ui.messages.confirmAction}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+              >
+                {ui.forms.cancel}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

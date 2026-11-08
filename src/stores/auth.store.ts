@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from 'react';
-import initialUsers from '../seed/users.json';
 import { STORAGE_KEYS } from '../constants/storage';
 import { localStorageService } from '../storage/localStorage/localStorage.service';
 import type { User } from '../types/common.types';
@@ -22,7 +21,7 @@ function getInitialUser(): User | null {
   return localStorageService.getItem<User | null>(STORAGE_KEYS.CURRENT_USER, null);
 }
 
-function generateSecureToken(): string {
+export function generateSecureToken(): string {
   const bytes = new Uint8Array(32);
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     crypto.getRandomValues(bytes);
@@ -90,26 +89,9 @@ export const authStore = {
     };
   },
 
-  login(username: string, password: string): User | null {
-    if (!password || password.length < 4) {
-      return null;
-    }
-
-    const users = initialUsers as User[];
-    const trimmedUsername = username.trim().toLowerCase();
-    const match = users.find((u) => u.username.toLowerCase() === trimmedUsername);
-
-    if (match) {
-      const token = generateSecureToken();
-      updateState(match, token);
-      return match;
-    }
-    return null;
-  },
-
-  setUser(user: User): void {
-    const token = currentState.token || generateSecureToken();
-    updateState(user, token);
+  setUser(user: User, token?: string): void {
+    const sessionToken = token || currentState.token || generateSecureToken();
+    updateState(user, sessionToken);
   },
 
   logout(): void {
@@ -119,7 +101,7 @@ export const authStore = {
 
 // React hook for components using useSyncExternalStore
 export function useAuthStore(): AuthState & {
-  login: (username: string, password: string) => User | null;
+  setUser: (user: User, token?: string) => void;
   logout: () => void;
 } {
   const state = useSyncExternalStore(
@@ -130,7 +112,7 @@ export function useAuthStore(): AuthState & {
 
   return {
     ...state,
-    login: authStore.login,
+    setUser: authStore.setUser,
     logout: authStore.logout,
   };
 }

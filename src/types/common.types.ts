@@ -11,6 +11,32 @@ export interface User {
   department: string;
   email: string;
   advisoryClassroomId?: string;
+  permissions?: string[];
+  isPrimaryAccount?: boolean;
+}
+
+export interface RoleItem {
+  id: string;
+  name: string;
+  description?: string;
+  permissions: string[];
+}
+
+export interface Account {
+  id: string;
+  authUserId?: string;
+  username: string;
+  name: string;
+  email: string;
+  isPrimaryAccount: boolean;
+  mustSetPassword: boolean;
+  roleId?: string;
+  roleName: string;
+  permissions: string[];
+  advisoryClassroomId?: string;
+  position?: string;
+  department?: string;
+  avatarUrl?: string;
 }
 
 export interface Classroom {
@@ -83,4 +109,5 @@ export interface SystemSettings {
   enableLineNotification: boolean;
   emergencyContact: string;
   autoLockAttendanceHours: number;
+  isSystemInitialized?: boolean;
 }

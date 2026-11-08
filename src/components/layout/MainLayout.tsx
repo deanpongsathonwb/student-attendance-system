@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   CalendarCheck,
@@ -18,7 +18,8 @@ import { ROUTES } from '../../constants/routes';
 import { getStoredSettings, getUserAvatar } from '../../utils/dataStore';
 import { useAuthStore } from '../../stores/auth.store';
 import { authService } from '../../services/authService';
-import type { Role } from '../../types/common.types';
+import { settingsService } from '../../services/settingsService';
+import type { Role, SystemSettings } from '../../types/common.types';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -27,7 +28,21 @@ interface MainLayoutProps {
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuthStore();
-  const settings = getStoredSettings();
+  const [settings, setSettings] = useState<SystemSettings>(() => getStoredSettings());
+
+  useEffect(() => {
+    let isMounted = true;
+    settingsService.getSettings().then((s) => {
+      if (isMounted && s) setSettings(s);
+    });
+    const unsubscribe = settingsService.subscribe((s) => {
+      if (isMounted && s) setSettings(s);
+    });
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
 
   const handleLogout = () => {
     authService.logout();
