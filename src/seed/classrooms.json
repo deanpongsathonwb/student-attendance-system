@@ -1,0 +1,29 @@
+[
+  {
+    "id": "cls_m41",
+    "name": "มัธยมศึกษาปีที่ 4/1",
+    "shortName": "ม.4/1",
+    "gradeLevel": "4",
+    "roomNumber": "อาคาร 3 ห้อง 411",
+    "advisorId": "usr_advisor_01",
+    "totalStudents": 10
+  },
+  {
+    "id": "cls_m42",
+    "name": "มัธยมศึกษาปีที่ 4/2",
+    "shortName": "ม.4/2",
+    "gradeLevel": "4",
+    "roomNumber": "อาคาร 3 ห้อง 412",
+    "advisorId": "usr_teacher_01",
+    "totalStudents": 5
+  },
+  {
+    "id": "cls_m51",
+    "name": "มัธยมศึกษาปีที่ 5/1",
+    "shortName": "ม.5/1",
+    "gradeLevel": "5",
+    "roomNumber": "อาคาร 4 ห้อง 511",
+    "advisorId": "usr_admin_01",
+    "totalStudents": 5
+  }
+]

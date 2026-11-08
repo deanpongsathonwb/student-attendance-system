@@ -1,0 +1,35 @@
+[
+  {
+    "id": "crs_math_401",
+    "courseCode": "ค31101",
+    "name": "คณิตศาสตร์พื้นฐาน 1",
+    "credits": 1.5,
+    "classroomId": "cls_m41",
+    "teacherId": "usr_teacher_01",
+    "dayOfWeek": "จันทร์",
+    "period": 1,
+    "timeRange": "08:30 - 09:20"
+  },
+  {
+    "id": "crs_math_402",
+    "courseCode": "ค31101",
+    "name": "คณิตศาสตร์พื้นฐาน 1",
+    "credits": 1.5,
+    "classroomId": "cls_m42",
+    "teacherId": "usr_teacher_01",
+    "dayOfWeek": "อังคาร",
+    "period": 2,
+    "timeRange": "09:25 - 10:15"
+  },
+  {
+    "id": "crs_sci_401",
+    "courseCode": "ว31101",
+    "name": "วิทยาศาสตร์กายภาพ 1",
+    "credits": 1.5,
+    "classroomId": "cls_m41",
+    "teacherId": "usr_teacher_01",
+    "dayOfWeek": "พุธ",
+    "period": 3,
+    "timeRange": "10:20 - 11:10"
+  }
+]

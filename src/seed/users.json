@@ -1,0 +1,30 @@
+[
+  {
+    "id": "usr_teacher_01",
+    "username": "teacher",
+    "role": "teacher",
+    "fullName": "อ.สมชาย รุ่งเรือง",
+    "position": "ครูชำนาญการพิเศษ",
+    "department": "กลุ่มสาระการเรียนรู้คณิตศาสตร์",
+    "email": "somchai.r@satit.ac.th"
+  },
+  {
+    "id": "usr_advisor_01",
+    "username": "advisor",
+    "role": "advisor",
+    "fullName": "ครูกรรณิการ์ สดใส",
+    "position": "ครูชำนาญการ (ครูประจำชั้น ม.4/1)",
+    "department": "กลุ่มงานพัฒนานักเรียนและครูที่ปรึกษา",
+    "email": "kannika.s@satit.ac.th",
+    "advisoryClassroomId": "cls_m41"
+  },
+  {
+    "id": "usr_admin_01",
+    "username": "admin",
+    "role": "admin",
+    "fullName": "ดร.วิชัย ศักดิ์เจริญ",
+    "position": "หัวหน้างานทะเบียนและวิชาการ",
+    "department": "ฝ่ายบริหารงานวิชาการ",
+    "email": "wichai.s@satit.ac.th"
+  }
+]

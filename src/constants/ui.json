@@ -1,0 +1,184 @@
+{
+  "system": {
+    "name": "ระบบเช็คชื่อนักเรียน"
+  },
+  "symbols": {
+    "colon": ": ",
+    "slash": " / ",
+    "dash": " - ",
+    "verticalBar": " | ",
+    "parenthesisOpen": " (",
+    "parenthesisClose": ")"
+  },
+  "roles": {
+    "teacher": "ครูผู้สอน",
+    "advisor": "ครูประจำชั้น",
+    "admin": "ผู้ดูแลระบบวิชาการ"
+  },
+  "auth": {
+    "loginTitle": "เข้าสู่ระบบเพื่อปฏิบัติงาน",
+    "loginSubtitle": "กรุณาใช้บัญชีผู้ใช้งานที่ได้รับมอบหมายจากสถานศึกษา",
+    "usernameLabel": "ชื่อผู้ใช้งาน",
+    "passwordLabel": "รหัสผ่าน",
+    "usernamePlaceholder": "กรอกชื่อผู้ใช้งาน",
+    "passwordPlaceholder": "กรอกรหัสผ่าน",
+    "loginButton": "เข้าสู่ระบบ",
+    "logoutButton": "ออกจากระบบ",
+    "demoHint": "ข้อมูลเข้าสู่ระบบสำหรับการทดสอบ:",
+    "roleTeacherHint": "teacher (ครูผู้สอน)",
+    "roleAdvisorHint": "advisor (ครูประจำชั้น)",
+    "roleAdminHint": "admin (ผู้ดูแลระบบ)"
+  },
+  "nav": {
+    "teacher": {
+      "attendance": "บันทึกเวลาเรียนรายวิชา",
+      "reports": "รายงานสถิติการเข้าเรียน",
+      "courses": "ตารางสอนและวิชาที่รับผิดชอบ"
+    },
+    "advisor": {
+      "homeroomCheck": "เช็คชื่อเข้าแถวประจำวัน",
+      "classroomSummary": "สรุปการมาเรียนของห้องเรียน",
+      "absenceFollowup": "ติดตามนักเรียนขาดเรียน"
+    },
+    "admin": {
+      "overview": "ภาพรวมการเข้าเรียนทั้งสถานศึกษา",
+      "students": "จัดการข้อมูลนักเรียนและห้องเรียน",
+      "settings": "การตั้งค่าระบบสถานศึกษา"
+    }
+  },
+  "pageTitles": {
+    "teacherAttendance": "บันทึกเวลาเรียนรายวิชา",
+    "teacherReports": "รายงานสถิติการเข้าเรียนประจำวิชา",
+    "teacherCourses": "ตารางสอนและวิชาที่รับผิดชอบ",
+    "advisorHomeroom": "เช็คชื่อเข้าแถวหน้าเสาธงประจำวัน",
+    "advisorSummary": "สรุปการมาเรียนประจำห้องเรียน",
+    "advisorFollowup": "ติดตามนักเรียนขาดเรียนและติดต่อผู้ปกครอง",
+    "adminOverview": "ภาพรวมการเข้าเรียนทั้งสถานศึกษา",
+    "adminStudents": "จัดการข้อมูลนักเรียนและห้องเรียน",
+    "adminSettings": "การตั้งค่าระบบสถานศึกษา"
+  },
+  "attendance": {
+    "statuses": {
+      "present": "มาเรียน",
+      "late": "สาย",
+      "absent": "ขาดเรียน",
+      "leave": "ลา",
+      "activity": "กิจกรรม"
+    },
+    "actions": {
+      "markAllPresent": "ทำเครื่องหมายมาครบทุกคน",
+      "saveAttendance": "บันทึกเวลาเรียน",
+      "resetChanges": "คืนค่าเดิม",
+      "filterByDate": "เลือกวันที่",
+      "filterByCourse": "เลือกรายวิชา",
+      "filterByClassroom": "เลือกห้องเรียน",
+      "quickSearch": "ค้นหาชื่อหรือรหัสประจำตัว"
+    },
+    "stats": {
+      "total": "จำนวนนักเรียนทั้งหมด",
+      "presentCount": "มาเรียน",
+      "lateCount": "มาสาย",
+      "absentCount": "ขาดเรียน",
+      "leaveCount": "ลา",
+      "activityCount": "กิจกรรม",
+      "attendanceRate": "ร้อยละการมาเรียน",
+      "minimumRequirement": "เกณฑ์ขั้นต่ำตามระเบียบ",
+      "atRiskCount": "นักเรียนกลุ่มเสี่ยง มส."
+    }
+  },
+  "table": {
+    "no": "ลำดับ",
+    "seatNumber": "เลขที่",
+    "studentCode": "รหัสประจำตัว",
+    "fullName": "ชื่อ - นามสกุล",
+    "classroom": "ห้องเรียน",
+    "status": "สถานะการเช็คชื่อ",
+    "checkTime": "เวลาที่บันทึก",
+    "remarks": "หมายเหตุ",
+    "parentContact": "ผู้ปกครอง / เบอร์ติดต่อ",
+    "action": "ดำเนินการ",
+    "courseCode": "รหัสวิชา",
+    "courseName": "ชื่อวิชา",
+    "credits": "หน่วยกิต",
+    "schedule": "วัน / คาบเรียน",
+    "room": "ห้องเรียนประจำ",
+    "rate": "ร้อยละ",
+    "criteriaStatus": "ผลการประเมินเวลาเรียน"
+  },
+  "settings": {
+    "pageTitle": "การตั้งค่าระบบสถานศึกษา",
+    "systemOwnerLabel": "ชื่อหน่วยงาน / สถานศึกษา",
+    "academicYearLabel": "ปีการศึกษา",
+    "semesterLabel": "ภาคเรียนที่",
+    "morningCutoffLabel": "เวลาตัดยอดเข้าแถวเช้า",
+    "lateThresholdLabel": "เกณฑ์นับการมาสาย",
+    "minimumAttendanceLabel": "เกณฑ์ร้อยละเวลาเรียนขั้นต่ำ (มส.)",
+    "smsAlertLabel": "ส่งการแจ้งเตือน SMS ถึงผู้ปกครองเมื่อขาดเรียน",
+    "lineNotificationLabel": "ส่งสรุปผ่านระบบ LINE แจ้งครูประจำชั้น",
+    "emergencyContactLabel": "เบอร์โทรศัพท์ติดต่อกรณีฉุกเฉิน",
+    "autoLockHoursLabel": "ระยะเวลาล็อคการแก้ไขผลเช็คชื่ออัตโนมัติ",
+    "saveSettingsButton": "บันทึกการตั้งค่า",
+    "savedSuccessMessage": "บันทึกการเปลี่ยนแปลงการตั้งค่าเรียบร้อยแล้ว"
+  },
+  "modals": {
+    "contactParentTitle": "ข้อมูลติดต่อผู้ปกครอง",
+    "parentName": "ชื่อผู้ปกครอง",
+    "relation": "ความสัมพันธ์",
+    "phoneNumber": "เบอร์โทรศัพท์",
+    "callAction": "โทรออกทันที",
+    "sendNotificationAction": "ส่งข้อความแจ้งเตือน",
+    "close": "ปิดหน้าต่าง",
+    "addStudentTitle": "เพิ่มข้อมูลนักเรียนใหม่",
+    "editStudentTitle": "แก้ไขข้อมูลนักเรียน",
+    "confirmDeleteTitle": "ยืนยันการลบข้อมูล"
+  },
+  "forms": {
+    "studentCode": "รหัสประจำตัวนักเรียน",
+    "fullName": "ชื่อ - นามสกุล",
+    "seatNumber": "เลขที่",
+    "classroom": "ห้องเรียน",
+    "parentName": "ชื่อผู้ปกครอง",
+    "parentRelation": "ความสัมพันธ์",
+    "parentPhone": "เบอร์โทรศัพท์ผู้ปกครอง",
+    "save": "บันทึกข้อมูล",
+    "cancel": "ยกเลิก",
+    "edit": "แก้ไข",
+    "delete": "ลบ",
+    "add": "เพิ่มนักเรียนใหม่",
+    "allClassrooms": "ทุกห้องเรียน"
+  },
+  "units": {
+    "person": "คน",
+    "percentage": "%",
+    "period": "คาบ",
+    "minutes": "นาที",
+    "hours": "ชั่วโมง",
+    "room": "ห้อง",
+    "subject": "วิชา",
+    "day": "วัน"
+  },
+  "evaluation": {
+    "pass": "ผ่านเกณฑ์",
+    "atRisk": "เสี่ยง มส.",
+    "fail": "ไม่ผ่านเกณฑ์ (มส.)"
+  },
+  "messages": {
+    "loginSuccess": "เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ",
+    "loginFailed": "ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง",
+    "saveSuccess": "บันทึกข้อมูลเรียบร้อยแล้ว",
+    "recordSaved": "ผลการเช็คชื่อได้รับการบันทึกลงระบบแล้ว",
+    "noData": "ไม่พบข้อมูลที่ตรงกับเงื่อนไข",
+    "notificationSent": "ส่งข้อความแจ้งเตือนเรียบร้อยแล้ว",
+    "studentSaved": "บันทึกข้อมูลนักเรียนสำเร็จ",
+    "studentDeleted": "ลบข้อมูลนักเรียนสำเร็จ",
+    "confirmAction": "ยืนยันการดำเนินการ",
+    "requiredField": "กรุณากรอกข้อมูลนี้",
+    "unauthorizedAccess": "ไม่มีสิทธิ์เข้าถึงหน้านี้"
+  },
+  "layout": {
+    "roleBadge": "บทบาท:",
+    "statusLabel": "สถานะระบบ: พร้อมใช้งาน",
+    "activeSemester": "ภาคเรียน:",
+    "academicYear": "ปีการศึกษา:"
+  }
+}

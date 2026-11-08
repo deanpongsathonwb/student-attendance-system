@@ -1,0 +1,45 @@
+{
+  "subjectRecords": [
+    {
+      "id": "att_sub_01",
+      "courseId": "crs_math_401",
+      "classroomId": "cls_m41",
+      "date": "2026-11-02",
+      "period": 1,
+      "recorderId": "usr_teacher_01",
+      "entries": [
+        { "studentId": "std_401_01", "status": "present", "checkTime": "08:32", "remarks": "" },
+        { "studentId": "std_401_02", "status": "present", "checkTime": "08:31", "remarks": "" },
+        { "studentId": "std_401_03", "status": "late", "checkTime": "08:48", "remarks": "รถติด" },
+        { "studentId": "std_401_04", "status": "present", "checkTime": "08:30", "remarks": "" },
+        { "studentId": "std_401_05", "status": "leave", "checkTime": "08:30", "remarks": "ลาป่วยมีใบรับรองแพทย์" },
+        { "studentId": "std_401_06", "status": "present", "checkTime": "08:33", "remarks": "" },
+        { "studentId": "std_401_07", "status": "absent", "checkTime": "08:50", "remarks": "ไม่แจ้งเหตุผล" },
+        { "studentId": "std_401_08", "status": "present", "checkTime": "08:30", "remarks": "" },
+        { "studentId": "std_401_09", "status": "activity", "checkTime": "08:30", "remarks": "ตัวแทนแข่งขันหุ่นยนต์" },
+        { "studentId": "std_401_10", "status": "present", "checkTime": "08:34", "remarks": "" }
+      ]
+    }
+  ],
+  "homeroomRecords": [
+    {
+      "id": "att_hr_01",
+      "classroomId": "cls_m41",
+      "date": "2026-11-02",
+      "recorderId": "usr_advisor_01",
+      "checkTime": "07:55",
+      "entries": [
+        { "studentId": "std_401_01", "status": "present", "checkTime": "07:45", "remarks": "" },
+        { "studentId": "std_401_02", "status": "present", "checkTime": "07:48", "remarks": "" },
+        { "studentId": "std_401_03", "status": "late", "checkTime": "08:08", "remarks": "เข้าแถวสาย" },
+        { "studentId": "std_401_04", "status": "present", "checkTime": "07:40", "remarks": "" },
+        { "studentId": "std_401_05", "status": "leave", "checkTime": "07:50", "remarks": "ลาป่วย" },
+        { "studentId": "std_401_06", "status": "present", "checkTime": "07:52", "remarks": "" },
+        { "studentId": "std_401_07", "status": "absent", "checkTime": "08:15", "remarks": "ไม่มาเข้าแถว" },
+        { "studentId": "std_401_08", "status": "present", "checkTime": "07:35", "remarks": "" },
+        { "studentId": "std_401_09", "status": "activity", "checkTime": "07:30", "remarks": "ชุมนุมดนตรีสากล" },
+        { "studentId": "std_401_10", "status": "present", "checkTime": "07:50", "remarks": "" }
+      ]
+    }
+  ]
+}
