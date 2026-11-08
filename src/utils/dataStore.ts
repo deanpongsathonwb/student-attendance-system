@@ -29,7 +29,7 @@ export function getStoredCurrentUser(): User | null {
 
 export function setStoredCurrentUser(user: User | null): void {
   if (user) {
-    authStore.login(user.username, user.password || '');
+    authStore.setUser(user);
   } else {
     authStore.logout();
   }

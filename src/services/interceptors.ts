@@ -7,9 +7,9 @@ export function setupInterceptors(instance: AxiosInstance): void {
   // Request Interceptor: Attach authentication token and CSRF token
   instance.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
-      const user = authStore.getState().user;
-      if (user) {
-        config.headers.set('Authorization', `Bearer ${user.id}`);
+      const token = authStore.getState().token;
+      if (token) {
+        config.headers.set('Authorization', `Bearer ${token}`);
       }
 
       // Attach anti-CSRF token for state-modifying methods

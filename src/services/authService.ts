@@ -24,6 +24,10 @@ export const authService = {
     return authStore.getState().user;
   },
 
+  getToken(): string | null {
+    return authStore.getState().token;
+  },
+
   isAuthenticated(): boolean {
     return authStore.getState().isAuthenticated;
   },
