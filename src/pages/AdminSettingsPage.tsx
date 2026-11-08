@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Settings as SettingsIcon, Save, CheckCircle2, ShieldCheck, Bell, School } from 'lucide-react';
 import ui from '../constants/ui.json';
 import { getStoredSettings, saveStoredSettings } from '../utils/dataStore';
+import { sanitizeString } from '../security/xss/sanitizer';
 import type { SystemSettings } from '../types/common.types';
 
 export const AdminSettingsPage: React.FC = () => {
@@ -10,7 +11,15 @@ export const AdminSettingsPage: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    saveStoredSettings(settings);
+    const sanitized: SystemSettings = {
+      ...settings,
+      systemOwner: sanitizeString(settings.systemOwner),
+      academicYear: sanitizeString(settings.academicYear),
+      semester: sanitizeString(settings.semester),
+      morningCheckCutoffTime: sanitizeString(settings.morningCheckCutoffTime),
+      emergencyContact: sanitizeString(settings.emergencyContact),
+    };
+    saveStoredSettings(sanitized);
     setSavedSuccess(true);
     setTimeout(() => {
       setSavedSuccess(false);

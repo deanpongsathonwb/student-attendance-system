@@ -1,11 +1,10 @@
-import initialSettings from '../seed/settings.json';
 import initialUsers from '../seed/users.json';
-import initialClassrooms from '../seed/classrooms.json';
-import initialStudents from '../seed/students.json';
-import initialCourses from '../seed/courses.json';
-import initialAttendance from '../seed/attendance.json';
 import imagesData from '../seed/images.json';
-import { STORAGE_KEYS } from '../constants/storage';
+import { settingsService } from '../services/settingsService';
+import { studentService } from '../services/studentService';
+import { attendanceService } from '../services/attendanceService';
+import { courseService } from '../services/courseService';
+import { authStore } from '../stores/auth.store';
 import type {
   User,
   Classroom,
@@ -17,22 +16,12 @@ import type {
 } from '../types/common.types';
 
 export function getStoredSettings(): SystemSettings {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-    if (saved) {
-      return JSON.parse(saved) as SystemSettings;
-    }
-  } catch {
-    // fallback to initial
-  }
-  return initialSettings as SystemSettings;
+  return settingsService.getSettings();
 }
 
 export function saveStoredSettings(newSettings: SystemSettings): void {
-  localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(newSettings));
+  settingsService.saveSettings(newSettings);
 }
-
-import { authStore } from '../stores/auth.store';
 
 export function getStoredCurrentUser(): User | null {
   return authStore.getState().user;
@@ -51,27 +40,19 @@ export function getUsers(): User[] {
 }
 
 export function getClassrooms(): Classroom[] {
-  return initialClassrooms as Classroom[];
+  return courseService.getClassrooms();
 }
 
 export function getStudents(): Student[] {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEYS.STUDENTS_CACHE);
-    if (saved) {
-      return JSON.parse(saved) as Student[];
-    }
-  } catch {
-    // fallback
-  }
-  return initialStudents as Student[];
+  return studentService.getStudents();
 }
 
 export function saveStudents(students: Student[]): void {
-  localStorage.setItem(STORAGE_KEYS.STUDENTS_CACHE, JSON.stringify(students));
+  studentService.saveStudents(students);
 }
 
 export function getCourses(): Course[] {
-  return initialCourses as Course[];
+  return courseService.getCourses();
 }
 
 interface AttendanceStore {
@@ -80,19 +61,11 @@ interface AttendanceStore {
 }
 
 export function getAttendanceData(): AttendanceStore {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEYS.ATTENDANCE_CACHE);
-    if (saved) {
-      return JSON.parse(saved) as AttendanceStore;
-    }
-  } catch {
-    // fallback
-  }
-  return initialAttendance as AttendanceStore;
+  return attendanceService.getAttendanceData();
 }
 
 export function saveAttendanceData(data: AttendanceStore): void {
-  localStorage.setItem(STORAGE_KEYS.ATTENDANCE_CACHE, JSON.stringify(data));
+  attendanceService.saveAttendanceData(data);
 }
 
 export function getUserAvatar(userId: string): string {

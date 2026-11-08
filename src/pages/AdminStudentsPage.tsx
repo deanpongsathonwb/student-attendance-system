@@ -7,6 +7,7 @@ import {
   saveStudents,
   getStudentAvatar,
 } from '../utils/dataStore';
+import { sanitizeString } from '../security/xss/sanitizer';
 import type { Student } from '../types/common.types';
 
 export const AdminStudentsPage: React.FC = () => {
@@ -64,18 +65,24 @@ export const AdminStudentsPage: React.FC = () => {
 
   const handleSaveStudent = (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanStudentCode = sanitizeString(formStudentCode);
+    const cleanFullName = sanitizeString(formFullName);
+    const cleanParentName = sanitizeString(formParentName);
+    const cleanParentRelation = sanitizeString(formParentRelation);
+    const cleanParentPhone = sanitizeString(formParentPhone);
+
     if (editingStudent) {
       const updated = students.map((s) =>
         s.id === editingStudent.id
           ? {
               ...s,
-              studentCode: formStudentCode,
-              fullName: formFullName,
+              studentCode: cleanStudentCode,
+              fullName: cleanFullName,
               seatNumber: Number(formSeatNumber),
               classroomId: formClassroomId,
-              parentName: formParentName,
-              parentRelation: formParentRelation,
-              parentPhone: formParentPhone,
+              parentName: cleanParentName,
+              parentRelation: cleanParentRelation,
+              parentPhone: cleanParentPhone,
             }
           : s
       );
@@ -85,13 +92,13 @@ export const AdminStudentsPage: React.FC = () => {
     } else {
       const newStudent: Student = {
         id: `std_${Date.now()}`,
-        studentCode: formStudentCode,
-        fullName: formFullName,
+        studentCode: cleanStudentCode,
+        fullName: cleanFullName,
         seatNumber: Number(formSeatNumber),
         classroomId: formClassroomId,
-        parentName: formParentName,
-        parentRelation: formParentRelation,
-        parentPhone: formParentPhone,
+        parentName: cleanParentName,
+        parentRelation: cleanParentRelation,
+        parentPhone: cleanParentPhone,
       };
       const updated = [...students, newStudent];
       setStudents(updated);

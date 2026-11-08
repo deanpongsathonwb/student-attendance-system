@@ -1,19 +1,12 @@
 import { useSyncExternalStore } from 'react';
 import initialUsers from '../seed/users.json';
 import { STORAGE_KEYS } from '../constants/storage';
+import { localStorageService } from '../storage/localStorage/localStorage.service';
 import type { User } from '../types/common.types';
 
 // Load stored authenticated user from persistent storage
 function getInitialUser(): User | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-    if (raw) {
-      return JSON.parse(raw) as User;
-    }
-  } catch {
-    // fallback
-  }
-  return null;
+  return localStorageService.getItem<User | null>(STORAGE_KEYS.CURRENT_USER, null);
 }
 
 interface AuthState {
@@ -42,9 +35,9 @@ function updateState(nextUser: User | null): void {
   };
 
   if (nextUser) {
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(nextUser));
+    localStorageService.setItem(STORAGE_KEYS.CURRENT_USER, nextUser);
   } else {
-    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    localStorageService.removeItem(STORAGE_KEYS.CURRENT_USER);
   }
 
   notify();

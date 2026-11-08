@@ -10,6 +10,7 @@ import {
   getStoredCurrentUser,
   getStudentAvatar,
 } from '../utils/dataStore';
+import { sanitizeString } from '../security/xss/sanitizer';
 import type { AttendanceStatus, AttendanceEntry } from '../types/common.types';
 
 export const AdvisorHomeroomPage: React.FC = () => {
@@ -97,14 +98,19 @@ export const AdvisorHomeroomPage: React.FC = () => {
   const handleSave = () => {
     const data = getAttendanceData();
     const recordEntries: AttendanceEntry[] = students.map((s) => {
-      return (
-        entries[s.id] || {
-          studentId: s.id,
-          status: 'present',
-          checkTime: '07:45',
-          remarks: '',
-        }
-      );
+      const existing = entries[s.id];
+      if (existing) {
+        return {
+          ...existing,
+          remarks: sanitizeString(existing.remarks || ''),
+        };
+      }
+      return {
+        studentId: s.id,
+        status: 'present',
+        checkTime: '07:45',
+        remarks: '',
+      };
     });
 
     const index = data.homeroomRecords.findIndex(

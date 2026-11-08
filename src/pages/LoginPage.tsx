@@ -5,6 +5,8 @@ import ui from '../constants/ui.json';
 import { ROUTES } from '../constants/routes';
 import { getStoredSettings } from '../utils/dataStore';
 import { useAuthStore } from '../stores/auth.store';
+import { sanitizeString } from '../security/xss/sanitizer';
+import { authService } from '../services/authService';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -16,15 +18,11 @@ export const LoginPage: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const authenticatedUser = login(username, password);
+    const cleanUsername = sanitizeString(username);
+    const authenticatedUser = login(cleanUsername, password);
     if (authenticatedUser) {
-      if (authenticatedUser.role === 'teacher') {
-        navigate(ROUTES.TEACHER.ATTENDANCE);
-      } else if (authenticatedUser.role === 'advisor') {
-        navigate(ROUTES.ADVISOR.HOMEROOM_CHECK);
-      } else if (authenticatedUser.role === 'admin') {
-        navigate(ROUTES.ADMIN.OVERVIEW);
-      }
+      const redirectPath = authService.getRedirectPathForRole(authenticatedUser.role);
+      navigate(redirectPath);
     } else {
       setErrorMessage(ui.messages.loginFailed);
     }

@@ -17,6 +17,7 @@ import ui from '../../constants/ui.json';
 import { ROUTES } from '../../constants/routes';
 import { getStoredSettings, getUserAvatar } from '../../utils/dataStore';
 import { useAuthStore } from '../../stores/auth.store';
+import { authService } from '../../services/authService';
 import type { Role } from '../../types/common.types';
 
 interface MainLayoutProps {
@@ -25,11 +26,11 @@ interface MainLayoutProps {
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
-  const { user: currentUser, logout } = useAuthStore();
+  const { user: currentUser } = useAuthStore();
   const settings = getStoredSettings();
 
   const handleLogout = () => {
-    logout();
+    authService.logout();
     navigate(ROUTES.PUBLIC.LOGIN);
   };
 
