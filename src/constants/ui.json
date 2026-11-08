@@ -180,5 +180,12 @@
     "statusLabel": "สถานะระบบ: พร้อมใช้งาน",
     "activeSemester": "ภาคเรียน:",
     "academicYear": "ปีการศึกษา:"
+  },
+  "feedback": {
+    "loading": "กำลังโหลดข้อมูล...",
+    "emptyTitle": "ไม่พบข้อมูล",
+    "emptyDescription": "ไม่มีข้อมูลที่ตรงกับเงื่อนไข",
+    "errorTitle": "เกิดข้อผิดพลาดในการทำงาน",
+    "retryButton": "ลองใหม่อีกครั้ง"
   }
 }
