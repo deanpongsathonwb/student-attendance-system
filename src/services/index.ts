@@ -6,3 +6,4 @@ export * from './attendanceService';
 export * from './courseService';
 export * from './settingsService';
 export * from './concurrency';
+export * from './supabaseClient';
