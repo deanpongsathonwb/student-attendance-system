@@ -2,6 +2,7 @@
   {
     "id": "usr_teacher_01",
     "username": "teacher",
+    "password": "Password123!",
     "role": "teacher",
     "fullName": "อ.สมชาย รุ่งเรือง",
     "position": "ครูชำนาญการพิเศษ",
@@ -11,6 +12,7 @@
   {
     "id": "usr_advisor_01",
     "username": "advisor",
+    "password": "Password123!",
     "role": "advisor",
     "fullName": "ครูกรรณิการ์ สดใส",
     "position": "ครูชำนาญการ (ครูประจำชั้น ม.4/1)",
@@ -21,6 +23,7 @@
   {
     "id": "usr_admin_01",
     "username": "admin",
+    "password": "Password123!",
     "role": "admin",
     "fullName": "ดร.วิชัย ศักดิ์เจริญ",
     "position": "หัวหน้างานทะเบียนและวิชาการ",

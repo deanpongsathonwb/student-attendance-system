@@ -23,11 +23,7 @@
     "usernamePlaceholder": "กรอกชื่อผู้ใช้งาน",
     "passwordPlaceholder": "กรอกรหัสผ่าน",
     "loginButton": "เข้าสู่ระบบ",
-    "logoutButton": "ออกจากระบบ",
-    "demoHint": "ข้อมูลเข้าสู่ระบบสำหรับการทดสอบ:",
-    "roleTeacherHint": "teacher (ครูผู้สอน)",
-    "roleAdvisorHint": "advisor (ครูประจำชั้น)",
-    "roleAdminHint": "admin (ผู้ดูแลระบบ)"
+    "logoutButton": "ออกจากระบบ"
   },
   "nav": {
     "teacher": {

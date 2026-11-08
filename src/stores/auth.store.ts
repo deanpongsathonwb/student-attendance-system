@@ -1,9 +1,9 @@
 import { useSyncExternalStore } from 'react';
 import initialUsers from '../seed/users.json';
 import { STORAGE_KEYS } from '../constants/storage';
-import type { User, Role } from '../types/common.types';
+import type { User } from '../types/common.types';
 
-// Load stored user initially from localStorage
+// Load stored authenticated user from persistent storage
 function getInitialUser(): User | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
@@ -26,7 +26,7 @@ let currentState: AuthState = {
   isAuthenticated: Boolean(getInitialUser()),
 };
 
-// Listeners set for Pub/Sub pattern
+// Global Pub/Sub listener registry
 const listeners = new Set<() => void>();
 
 function notify(): void {
@@ -62,24 +62,20 @@ export const authStore = {
     };
   },
 
-  login(username: string): boolean {
+  login(username: string, password: string): User | null {
     const users = initialUsers as User[];
-    const match = users.find((u) => u.username.toLowerCase() === username.trim().toLowerCase());
-    if (match) {
-      updateState(match);
-      return true;
-    }
-    return false;
-  },
+    const trimmedUsername = username.trim().toLowerCase();
+    const match = users.find(
+      (u) =>
+        u.username.toLowerCase() === trimmedUsername &&
+        (!u.password || u.password === password)
+    );
 
-  loginAsRole(role: Role): boolean {
-    const users = initialUsers as User[];
-    const match = users.find((u) => u.role === role);
     if (match) {
       updateState(match);
-      return true;
+      return match;
     }
-    return false;
+    return null;
   },
 
   logout(): void {
@@ -89,8 +85,7 @@ export const authStore = {
 
 // React hook for components using useSyncExternalStore
 export function useAuthStore(): AuthState & {
-  login: (username: string) => boolean;
-  loginAsRole: (role: Role) => boolean;
+  login: (username: string, password: string) => User | null;
   logout: () => void;
 } {
   const state = useSyncExternalStore(
@@ -102,7 +97,6 @@ export function useAuthStore(): AuthState & {
   return {
     ...state,
     login: authStore.login,
-    loginAsRole: authStore.loginAsRole,
     logout: authStore.logout,
   };
 }

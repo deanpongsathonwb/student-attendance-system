@@ -5,46 +5,28 @@ import ui from '../constants/ui.json';
 import { ROUTES } from '../constants/routes';
 import { getStoredSettings } from '../utils/dataStore';
 import { useAuthStore } from '../stores/auth.store';
-import type { Role } from '../types/common.types';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const settings = getStoredSettings();
-  const { login, loginAsRole } = useAuthStore();
+  const { login } = useAuthStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  const handleRedirectRole = (role: Role) => {
-    if (role === 'teacher') {
-      navigate(ROUTES.TEACHER.ATTENDANCE);
-    } else if (role === 'advisor') {
-      navigate(ROUTES.ADVISOR.HOMEROOM_CHECK);
-    } else if (role === 'admin') {
-      navigate(ROUTES.ADMIN.OVERVIEW);
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const success = login(username);
-    if (success) {
-      const u = username.toLowerCase().trim();
-      if (u === 'teacher') handleRedirectRole('teacher');
-      else if (u === 'advisor') handleRedirectRole('advisor');
-      else handleRedirectRole('admin');
+    const authenticatedUser = login(username, password);
+    if (authenticatedUser) {
+      if (authenticatedUser.role === 'teacher') {
+        navigate(ROUTES.TEACHER.ATTENDANCE);
+      } else if (authenticatedUser.role === 'advisor') {
+        navigate(ROUTES.ADVISOR.HOMEROOM_CHECK);
+      } else if (authenticatedUser.role === 'admin') {
+        navigate(ROUTES.ADMIN.OVERVIEW);
+      }
     } else {
       setErrorMessage(ui.messages.loginFailed);
-    }
-  };
-
-  const handleSelectDemoUser = (role: Role, demoUsername: string) => {
-    setUsername(demoUsername);
-    setPassword('123456');
-    setErrorMessage('');
-    const success = loginAsRole(role);
-    if (success) {
-      handleRedirectRole(role);
     }
   };
 
@@ -128,36 +110,6 @@ export const LoginPage: React.FC = () => {
                 {ui.auth.loginButton}
               </button>
             </form>
-
-            {/* Quick Demo Credentials Selection */}
-            <div className="mt-6 pt-5 border-t border-slate-200">
-              <span className="block text-xs font-semibold text-slate-600 mb-2">
-                {ui.auth.demoHint}
-              </span>
-              <div className="grid grid-cols-1 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleSelectDemoUser('teacher', 'teacher')}
-                  className="w-full text-left px-3 py-1.5 rounded-md bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-xs text-slate-700 hover:text-blue-700 transition-colors cursor-pointer"
-                >
-                  {ui.auth.roleTeacherHint}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectDemoUser('advisor', 'advisor')}
-                  className="w-full text-left px-3 py-1.5 rounded-md bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-xs text-slate-700 hover:text-blue-700 transition-colors cursor-pointer"
-                >
-                  {ui.auth.roleAdvisorHint}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectDemoUser('admin', 'admin')}
-                  className="w-full text-left px-3 py-1.5 rounded-md bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-xs text-slate-700 hover:text-blue-700 transition-colors cursor-pointer"
-                >
-                  {ui.auth.roleAdminHint}
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
