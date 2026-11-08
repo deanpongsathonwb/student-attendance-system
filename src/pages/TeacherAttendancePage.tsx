@@ -357,7 +357,7 @@ export const TeacherAttendancePage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleStatusChange(student.id, 'present')}
-                        className={`px-2.5 py-1.5 rounded-md font-medium text-xs transition-colors cursor-pointer ${
+                        className={`w-18 text-center px-2 py-1.5 rounded-md font-medium text-xs transition-colors cursor-pointer ${
                           entry.status === 'present'
                             ? 'bg-emerald-600 text-white shadow-xs'
                             : 'bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700'
@@ -369,7 +369,7 @@ export const TeacherAttendancePage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleStatusChange(student.id, 'late')}
-                        className={`px-2.5 py-1.5 rounded-md font-medium text-xs transition-colors cursor-pointer ${
+                        className={`w-18 text-center px-2 py-1.5 rounded-md font-medium text-xs transition-colors cursor-pointer ${
                           entry.status === 'late'
                             ? 'bg-amber-600 text-white shadow-xs'
                             : 'bg-slate-100 text-slate-600 hover:bg-amber-50 hover:text-amber-700'
@@ -381,7 +381,7 @@ export const TeacherAttendancePage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleStatusChange(student.id, 'absent')}
-                        className={`px-2.5 py-1.5 rounded-md font-medium text-xs transition-colors cursor-pointer ${
+                        className={`w-18 text-center px-2 py-1.5 rounded-md font-medium text-xs transition-colors cursor-pointer ${
                           entry.status === 'absent'
                             ? 'bg-rose-600 text-white shadow-xs'
                             : 'bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-700'
@@ -393,7 +393,7 @@ export const TeacherAttendancePage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleStatusChange(student.id, 'leave')}
-                        className={`px-2.5 py-1.5 rounded-md font-medium text-xs transition-colors cursor-pointer ${
+                        className={`w-18 text-center px-2 py-1.5 rounded-md font-medium text-xs transition-colors cursor-pointer ${
                           entry.status === 'leave'
                             ? 'bg-blue-600 text-white shadow-xs'
                             : 'bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-700'
@@ -405,7 +405,7 @@ export const TeacherAttendancePage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleStatusChange(student.id, 'activity')}
-                        className={`px-2.5 py-1.5 rounded-md font-medium text-xs transition-colors cursor-pointer ${
+                        className={`w-18 text-center px-2 py-1.5 rounded-md font-medium text-xs transition-colors cursor-pointer ${
                           entry.status === 'activity'
                             ? 'bg-purple-600 text-white shadow-xs'
                             : 'bg-slate-100 text-slate-600 hover:bg-purple-50 hover:text-purple-700'

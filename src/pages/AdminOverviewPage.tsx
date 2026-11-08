@@ -235,7 +235,7 @@ export const AdminOverviewPage: React.FC = () => {
                 </td>
                 <td className="py-3 px-4 text-center">
                   <span
-                    className={`font-bold px-2 py-1 rounded-md text-xs ${
+                    className={`inline-block w-16 text-center font-bold px-2 py-1 rounded-md text-xs ${
                       item.rate >= settings.minimumAttendancePercentage
                         ? 'bg-emerald-50 text-emerald-700'
                         : 'bg-rose-50 text-rose-700'

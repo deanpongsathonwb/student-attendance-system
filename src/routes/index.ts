@@ -1,7 +1,6 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { ROUTES } from '../constants/routes';
-import { getStoredCurrentUser } from '../utils/dataStore';
 import { MainLayout } from '../components/layout/MainLayout';
 import { LoginPage } from '../pages/LoginPage';
 import { TeacherAttendancePage } from '../pages/TeacherAttendancePage';
@@ -15,6 +14,8 @@ import { AdminStudentsPage } from '../pages/AdminStudentsPage';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
 import type { Role } from '../types/common.types';
 
+import { useAuthStore } from '../stores/auth.store';
+
 // Helper to get role default path
 export const getRoleHomePath = (role: Role): string => {
   if (role === 'teacher') return ROUTES.TEACHER.ATTENDANCE;
@@ -24,7 +25,7 @@ export const getRoleHomePath = (role: Role): string => {
 
 // Guard for unauthenticated public routes (e.g. login)
 export const PublicRouteGuard: React.FC = () => {
-  const user = getStoredCurrentUser();
+  const { user } = useAuthStore();
   if (user) {
     return React.createElement(Navigate, { to: getRoleHomePath(user.role), replace: true });
   }
@@ -37,7 +38,7 @@ interface ProtectedRouteGuardProps {
 }
 
 export const ProtectedRouteGuard: React.FC<ProtectedRouteGuardProps> = ({ allowedRole }) => {
-  const user = getStoredCurrentUser();
+  const { user } = useAuthStore();
 
   if (!user) {
     return React.createElement(Navigate, { to: ROUTES.PUBLIC.LOGIN, replace: true });
@@ -52,7 +53,7 @@ export const ProtectedRouteGuard: React.FC<ProtectedRouteGuardProps> = ({ allowe
 
 // Root index redirector
 export const RootRedirect: React.FC = () => {
-  const user = getStoredCurrentUser();
+  const { user } = useAuthStore();
   if (!user) {
     return React.createElement(Navigate, { to: ROUTES.PUBLIC.LOGIN, replace: true });
   }

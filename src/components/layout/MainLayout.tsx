@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import ui from '../../constants/ui.json';
 import { ROUTES } from '../../constants/routes';
-import { getStoredCurrentUser, getStoredSettings, setStoredCurrentUser, getUserAvatar } from '../../utils/dataStore';
+import { getStoredSettings, getUserAvatar } from '../../utils/dataStore';
+import { useAuthStore } from '../../stores/auth.store';
 import type { Role } from '../../types/common.types';
 
 interface MainLayoutProps {
@@ -24,11 +25,11 @@ interface MainLayoutProps {
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
-  const currentUser = getStoredCurrentUser();
+  const { user: currentUser, logout } = useAuthStore();
   const settings = getStoredSettings();
 
   const handleLogout = () => {
-    setStoredCurrentUser(null);
+    logout();
     navigate(ROUTES.PUBLIC.LOGIN);
   };
 
@@ -43,9 +44,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       {/* Top Header */}
       <header className="h-18 bg-white border-b border-slate-200 px-8 flex items-center justify-between shrink-0 shadow-xs">
         <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-lg bg-blue-700 flex items-center justify-center text-white shadow-xs">
-            <GraduationCap className="w-6 h-6" />
-          </div>
+          <img
+            src="/favicon.svg"
+            alt=""
+            className="w-11 h-11 rounded-lg shadow-xs object-contain"
+          />
           <div className="flex flex-col">
             <h1 className="text-xl font-bold text-slate-900 leading-tight tracking-tight">
               {ui.system.name}

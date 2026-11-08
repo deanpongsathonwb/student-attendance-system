@@ -189,7 +189,7 @@ export const AdvisorSummaryPage: React.FC = () => {
                 </td>
                 <td className="py-3 px-4 text-center">
                   <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${row.statusColor}`}
+                    className={`inline-flex items-center justify-center gap-1 w-36 px-2.5 py-1 rounded-full text-xs font-semibold border ${row.statusColor}`}
                   >
                     {row.evaluation === ui.evaluation.pass && <CheckCircle className="w-3.5 h-3.5" />}
                     {row.evaluation === ui.evaluation.atRisk && <AlertTriangle className="w-3.5 h-3.5" />}

@@ -32,23 +32,17 @@ export function saveStoredSettings(newSettings: SystemSettings): void {
   localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(newSettings));
 }
 
+import { authStore } from '../stores/auth.store';
+
 export function getStoredCurrentUser(): User | null {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-    if (saved) {
-      return JSON.parse(saved) as User;
-    }
-  } catch {
-    // fallback
-  }
-  return null;
+  return authStore.getState().user;
 }
 
 export function setStoredCurrentUser(user: User | null): void {
   if (user) {
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+    authStore.login(user.username);
   } else {
-    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    authStore.logout();
   }
 }
 

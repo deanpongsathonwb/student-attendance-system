@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fcd34d" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Background rounded card -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+
+  <!-- Graduation Cap (Mortarboard) -->
+  <g filter="url(#shadow)">
+    <!-- Cap Diamond / Rhombus -->
+    <polygon points="256,120 436,195 256,270 76,195" fill="#ffffff" />
+    
+    <!-- Cap Skull Base -->
+    <path d="M140,225 L140,295 C140,345 372,345 372,295 L372,225 C336,252 296,268 256,268 C216,268 176,252 140,225 Z" fill="#e2e8f0" />
+    
+    <!-- Cap Top Center Button -->
+    <ellipse cx="256" cy="195" rx="12" ry="8" fill="#cbd5e1" />
+
+    <!-- Tassel Ribbon & Ring -->
+    <path d="M256,195 Q230,225 210,245 L202,320" fill="none" stroke="url(#goldGrad)" stroke-width="8" stroke-linecap="round" />
+    <polygon points="196,320 208,320 214,355 190,355" fill="url(#goldGrad)" />
+  </g>
+
+  <!-- Attendance Check Badge -->
+  <g filter="url(#shadow)">
+    <circle cx="370" cy="370" r="82" fill="url(#badgeGrad)" stroke="#ffffff" stroke-width="12" />
+    <!-- Checkmark -->
+    <path d="M336,370 L360,394 L408,344" fill="none" stroke="#ffffff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+</svg>

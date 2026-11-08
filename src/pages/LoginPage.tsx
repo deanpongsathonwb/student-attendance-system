@@ -1,40 +1,51 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, Lock, User as UserIcon, AlertCircle } from 'lucide-react';
+import { Lock, User as UserIcon, AlertCircle } from 'lucide-react';
 import ui from '../constants/ui.json';
 import { ROUTES } from '../constants/routes';
-import { getUsers, setStoredCurrentUser, getStoredSettings } from '../utils/dataStore';
+import { getStoredSettings } from '../utils/dataStore';
+import { useAuthStore } from '../stores/auth.store';
+import type { Role } from '../types/common.types';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const settings = getStoredSettings();
+  const { login, loginAsRole } = useAuthStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
+  const handleRedirectRole = (role: Role) => {
+    if (role === 'teacher') {
+      navigate(ROUTES.TEACHER.ATTENDANCE);
+    } else if (role === 'advisor') {
+      navigate(ROUTES.ADVISOR.HOMEROOM_CHECK);
+    } else if (role === 'admin') {
+      navigate(ROUTES.ADMIN.OVERVIEW);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const users = getUsers();
-    const foundUser = users.find((u) => u.username.toLowerCase() === username.trim().toLowerCase());
-
-    if (foundUser) {
-      setStoredCurrentUser(foundUser);
-      if (foundUser.role === 'teacher') {
-        navigate(ROUTES.TEACHER.ATTENDANCE);
-      } else if (foundUser.role === 'advisor') {
-        navigate(ROUTES.ADVISOR.HOMEROOM_CHECK);
-      } else if (foundUser.role === 'admin') {
-        navigate(ROUTES.ADMIN.OVERVIEW);
-      }
+    const success = login(username);
+    if (success) {
+      const u = username.toLowerCase().trim();
+      if (u === 'teacher') handleRedirectRole('teacher');
+      else if (u === 'advisor') handleRedirectRole('advisor');
+      else handleRedirectRole('admin');
     } else {
       setErrorMessage(ui.messages.loginFailed);
     }
   };
 
-  const handleSelectDemoUser = (demoUsername: string) => {
+  const handleSelectDemoUser = (role: Role, demoUsername: string) => {
     setUsername(demoUsername);
     setPassword('123456');
     setErrorMessage('');
+    const success = loginAsRole(role);
+    if (success) {
+      handleRedirectRole(role);
+    }
   };
 
   return (
@@ -43,9 +54,11 @@ export const LoginPage: React.FC = () => {
         {/* System Branding Card */}
         <div className="bg-white rounded-xl shadow-md border border-slate-200 p-8">
           <div className="flex flex-col items-center text-center mb-6">
-            <div className="w-14 h-14 rounded-xl bg-blue-700 flex items-center justify-center text-white shadow-sm mb-3">
-              <GraduationCap className="w-8 h-8" />
-            </div>
+            <img
+              src="/favicon.svg"
+              alt=""
+              className="w-16 h-16 rounded-xl shadow-xs mb-3 object-contain"
+            />
             <h1 className="text-2xl font-bold text-slate-900 leading-tight">
               {ui.system.name}
             </h1>
@@ -124,21 +137,21 @@ export const LoginPage: React.FC = () => {
               <div className="grid grid-cols-1 gap-1.5">
                 <button
                   type="button"
-                  onClick={() => handleSelectDemoUser('teacher')}
+                  onClick={() => handleSelectDemoUser('teacher', 'teacher')}
                   className="w-full text-left px-3 py-1.5 rounded-md bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-xs text-slate-700 hover:text-blue-700 transition-colors cursor-pointer"
                 >
                   {ui.auth.roleTeacherHint}
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleSelectDemoUser('advisor')}
+                  onClick={() => handleSelectDemoUser('advisor', 'advisor')}
                   className="w-full text-left px-3 py-1.5 rounded-md bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-xs text-slate-700 hover:text-blue-700 transition-colors cursor-pointer"
                 >
                   {ui.auth.roleAdvisorHint}
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleSelectDemoUser('admin')}
+                  onClick={() => handleSelectDemoUser('admin', 'admin')}
                   className="w-full text-left px-3 py-1.5 rounded-md bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-xs text-slate-700 hover:text-blue-700 transition-colors cursor-pointer"
                 >
                   {ui.auth.roleAdminHint}

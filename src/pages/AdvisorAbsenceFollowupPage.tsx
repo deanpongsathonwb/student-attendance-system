@@ -113,7 +113,7 @@ export const AdvisorAbsenceFollowupPage: React.FC = () => {
                 </td>
                 <td className="py-3 px-4 text-center">
                   <span
-                    className={`inline-block px-2.5 py-1 rounded-md font-semibold text-xs ${
+                    className={`inline-block w-20 text-center px-2.5 py-1 rounded-md font-semibold text-xs ${
                       status === 'absent'
                         ? 'bg-rose-100 text-rose-800'
                         : status === 'late'
